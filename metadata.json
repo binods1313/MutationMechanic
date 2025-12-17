@@ -1,0 +1,5 @@
+{
+  "name": "MutationMechanic",
+  "description": "AI-driven protein engineering dashboard visualizing structural predictions and compensatory mutation analysis.",
+  "requestFramePermissions": []
+}
