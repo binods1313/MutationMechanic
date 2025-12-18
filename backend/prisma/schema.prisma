@@ -1,0 +1,216 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// User model for authentication and authorization
+model User {
+  id                  String    @id @default(cuid())
+  email               String    @unique
+  name                String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  analyses            Analysis[]
+  splicingAnalyses    SplicingAnalysis[]
+  sharedAsCreator     SharedAccess[] @relation("SharedBy")
+  sharedAsRecipient   SharedAccess[] @relation("SharedWith")
+  userPreferences     UserPreference[]
+  historyRecords      HistoryRecord[]
+  comments            Comment[]
+  proteinStructures   ProteinStructure[]
+
+  @@map("users")
+}
+
+// Main analysis model storing variant analysis results
+model Analysis {
+  id                    String              @id @default(cuid())
+  userId                String
+  gene                  String
+  variant               String
+  variantType           String              // e.g., "MISSENSE", "FRAMESHIFT", etc.
+  protein               String?
+  hgvs                  String?
+  disease               String?
+  mechanism             String?
+  uniprotId             String?
+  sequence              String?
+  mutantSequence        String?
+  mutationPosition      Int?
+  
+  // Structural analysis data
+  structuralAnalysis    Json?               // Stores complex structural data as JSON
+  predictions           Json?               // Native/mutant structure predictions
+  plddtAvg              Float?
+  rmsd                  Float?
+  confidence            Int?
+  
+  // Clinical interpretation
+  pathogenicity         String?             // "BENIGN", "VUS", "PATHOGENIC"
+  pathogenicityScore    Int?
+  clinicalSignificance  String?
+  diseaseAssociations   String[]            @default([])
+  populationFrequency   String?
+  
+  // Therapy suggestions
+  therapySuitability    Json?               // Stores therapy suitability as JSON
+  treatments            Json?               // Treatment recommendations as JSON
+  
+  // Compensatory mutations
+  compensatoryMutations Json?               // Array of suggested compensatory mutations
+  
+  // Metadata
+  source                String?             // "API", "CACHE", "SIMULATION"
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  archived              Boolean             @default(false)
+  notes                 String?
+  
+  // Relationships
+  user                  User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  historyRecords        HistoryRecord[]
+  sharedAccess          SharedAccess[]
+  splicingAnalysis      SplicingAnalysis[]
+  comments              Comment[]
+  proteinStructures     ProteinStructure[]
+  
+  @@map("analyses")
+}
+
+// History records model (migrated from frontend IndexedDB)
+model HistoryRecord {
+  id                    String    @id @default(cuid())
+  userId                String
+  analysisId            String
+  gene                  String
+  variant               String
+  timestamp             DateTime  @default(now())
+  riskLevel             String    // "LOW", "MEDIUM", "HIGH"
+  pathogenicityScore    Int
+  confidence            Int
+  diseaseAssociations   String[]
+  therapies             String[]
+  notes                 String?
+  analysisType          String    // "EXPLAINER", "DECODER"
+  variantType           String    // "MISSENSE", "FRAMESHIFT", etc.
+  position              Int?
+  archived              Boolean   @default(false)
+  
+  // Relationships
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  analysis              Analysis  @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  
+  @@map("history_records")
+}
+
+// Splicing analysis model
+model SplicingAnalysis {
+  id                    String    @id @default(cuid())
+  userId                String
+  analysisId            String
+  gene                  String
+  variant               String
+  analysisIdFromAPI     String?   // Internal analysis id from API
+  timestamp             DateTime  @default(now())
+  confidence            Int
+  clinicalSeverity      String    // "BENIGN", "MODERATE", "SEVERE", "UNCERTAIN"
+  
+  // Splicing impact
+  mRNAImpact            Json?     // {stabilityChange, totalMRNALevel}
+  proteinImpact         Json?     // {frameshift, truncationPercentage, description}
+  exonsAffected         Json?     // Array of exon information
+  aiInterpretation      String?
+  
+  // Therapy suitability
+  therapySuitability    Json?     // Detailed therapy recommendations
+  
+  // Metadata
+  source                String?   // "API", "CACHE", "SIMULATION"
+  notes                 String?
+  
+  // Relationships
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  analysis              Analysis  @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  
+  @@map("splicing_analyses")
+}
+
+// Shared access model for collaboration
+model SharedAccess {
+  id              String   @id @default(cuid())
+  analysisId      String
+  sharedById      String   // User who shared the analysis
+  sharedWithId    String?  // Specific user (if not public)
+  shareToken      String   @unique  // Unique token for sharing
+  permissionType  String   // "READ", "WRITE", "COMMENT"
+  isPublic        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  expiresAt       DateTime?
+  
+  // Relationships
+  analysis        Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  sharedBy        User     @relation("SharedBy", fields: [sharedById], references: [id], onDelete: Cascade)
+  sharedWith      User?    @relation("SharedWith", fields: [sharedWithId], references: [id], onDelete: Cascade)
+  
+  @@map("shared_access")
+}
+
+// Comments model for collaboration
+model Comment {
+  id           String   @id @default(cuid())
+  analysisId   String
+  userId       String
+  content      String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  parentId     String?  // For nested comments/replies
+  isResolved   Boolean  @default(false)
+  
+  // Relationships
+  analysis     Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent       Comment? @relation("CommentReplies", fields: [parentId], references: [id])
+  replies      Comment[] @relation("CommentReplies")
+  
+  @@map("comments")
+}
+
+// User preferences model
+model UserPreference {
+  id               String   @id @default(cuid())
+  userId           String
+  theme            String?  @default("purple")
+  defaultAnalysis  String?  // Default analysis type preference
+  notifications    Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  // Relationships
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("user_preferences")
+}
+
+// Protein structure model for 3D visualization
+model ProteinStructure {
+  id              String    @id @default(cuid())
+  analysisId      String
+  userId          String
+  pdbStructure    String    // PDB format string
+  confidenceScore Float?
+  modelVersion    String?
+  isCached        Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  
+  // Relationships
+  analysis        Analysis  @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("protein_structures")
+}
