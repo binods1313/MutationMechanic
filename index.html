@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/3Dmol/2.0.4/3Dmol-min.js"></script>
     <script>
+      // Note: importmap removed for Safari iOS < 16.4 compatibility
       tailwind.config = {
         theme: {
           extend: {
@@ -66,23 +67,7 @@
         background: #64748b; 
       }
     </style>
-  <script type="importmap">
-{
-  "imports": {
-    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
-    "react-dom/": "https://esm.sh/react-dom@18.2.0/",
-    "react-dom": "https://esm.sh/react-dom@18.2.0",
-    "@google/genai": "https://esm.sh/@google/genai@0.3.1",
-    "react/": "https://esm.sh/react@18.2.0/",
-    "react": "https://esm.sh/react@18.2.0",
-    "recharts": "https://esm.sh/recharts@2.12.0",
-    "lucide-react": "https://esm.sh/lucide-react@0.344.0",
-    "@testing-library/jest-dom": "https://esm.sh/@testing-library/jest-dom@^6.4.2",
-    "@testing-library/react": "https://esm.sh/@testing-library/react@^14.2.1"
-  }
-}
-</script>
-<link rel="stylesheet" href="/index.css">
+  <link rel="stylesheet" href="/index.css">
 </head>
   <body>
     <div id="root"></div>

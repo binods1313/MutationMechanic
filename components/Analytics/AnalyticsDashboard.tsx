@@ -83,6 +83,26 @@ const getPearsonCorrelation = (x: number[], y: number[]) => {
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 // Section 7.2 Chart Optimization
+const PieCustomTooltip: React.FC<any> = ({ active, payload }) => {
+  if (!active || !payload || !payload.length) return null;
+  return (
+    <div className="risk-tooltip p-2 rounded text-sm">
+      <div className="font-bold">{payload[0].name}</div>
+      <div>{payload[0].value}</div>
+    </div>
+  );
+};
+
+const AreaCustomTooltip: React.FC<any> = ({ active, payload, label }) => {
+  if (!active || !payload || !payload.length) return null;
+  return (
+    <div className="risk-tooltip p-2 rounded text-sm">
+      <div className="font-bold">{label}</div>
+      <div>{payload[0].value}</div>
+    </div>
+  );
+};
+
 const MemoizedPieChart = memo(({ data }: { data: any[] }) => (
   <ResponsiveContainer width="100%" height="100%">
     <PieChart>
@@ -91,7 +111,7 @@ const MemoizedPieChart = memo(({ data }: { data: any[] }) => (
           <Cell key={`cell-${index}`} fill={entry.color} />
         ))}
       </Pie>
-      <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: 'none', borderRadius: '12px' }} />
+      <Tooltip content={<PieCustomTooltip/>} />
     </PieChart>
   </ResponsiveContainer>
 ));
@@ -328,8 +348,8 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                  </div>
                  {filters.dateRange === 'CUSTOM' && (
                     <div className="flex gap-2 animate-in fade-in slide-in-from-top-2 pt-2">
-                       <input type="date" value={filters.customDates[0]} onChange={e => setFilters(prev => ({ ...prev, customDates: [e.target.value, prev.customDates[1]] }))} className="bg-slate-950 border border-slate-800 rounded px-2 py-1 text-[10px] text-white w-full" />
-                       <input type="date" value={filters.customDates[1]} onChange={e => setFilters(prev => ({ ...prev, customDates: [prev.customDates[0], e.target.value] }))} className="bg-slate-950 border border-slate-800 rounded px-2 py-1 text-[10px] text-white w-full" />
+                       <input aria-label="Custom start date" type="date" value={filters.customDates[0]} onChange={e => setFilters(prev => ({ ...prev, customDates: [e.target.value, prev.customDates[1]] }))} className="bg-slate-950 border border-slate-800 rounded px-2 py-1 text-[10px] text-white w-full" />
+                       <input aria-label="Custom end date" type="date" value={filters.customDates[1]} onChange={e => setFilters(prev => ({ ...prev, customDates: [prev.customDates[0], e.target.value] }))} className="bg-slate-950 border border-slate-800 rounded px-2 py-1 text-[10px] text-white w-full" />
                     </div>
                  )}
               </div>
@@ -340,15 +360,16 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                  <div className="space-y-2">
                     {(['LOW', 'MEDIUM', 'HIGH'] as RiskLevel[]).map(risk => (
                       <label key={risk} className="flex items-center gap-3 cursor-pointer group">
-                         <div 
-                           onClick={() => setFilters(prev => ({
+                         <input
+                           type="checkbox"
+                           checked={filters.risks.includes(risk)}
+                           onChange={() => setFilters(prev => ({
                              ...prev,
                              risks: prev.risks.includes(risk) ? prev.risks.filter(r => r !== risk) : [...prev.risks, risk]
                            }))}
-                           className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${filters.risks.includes(risk) ? 'bg-primary border-primary' : 'bg-slate-950 border-slate-800 group-hover:border-slate-700'}`}
-                         >
-                           {filters.risks.includes(risk) && <Check size={10} className="text-white" />}
-                         </div>
+                           aria-label={`${risk} risk`}
+                           className={`w-4 h-4 rounded border transition-all ${filters.risks.includes(risk) ? 'bg-primary border-primary' : 'bg-slate-950 border-slate-800 group-hover:border-slate-700'}`}
+                         />
                          <span className="text-[11px] text-slate-300 font-medium">{risk} RISK</span>
                       </label>
                     ))}
@@ -359,14 +380,16 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
               <div className="space-y-3">
                  <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest block">Confidence Min: {filters.confidence[0]}%</label>
                  <input 
+                    aria-label="Minimum confidence"
                     type="range" 
                     min="0" max="100" 
                     value={filters.confidence[0]} 
                     onChange={e => setFilters(prev => ({ ...prev, confidence: [parseInt(e.target.value), 100] }))}
                     className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-primary"
                  />
-                 <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest block pt-2">Pathogenicity Tier</label>
+                 <label htmlFor="pathogenicity" className="text-[10px] text-slate-500 font-bold uppercase tracking-widest block pt-2">Pathogenicity Tier</label>
                  <select 
+                   id="pathogenicity"
                    value={filters.pathogenicity}
                    onChange={e => setFilters(prev => ({ ...prev, pathogenicity: e.target.value as any }))}
                    className="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1.5 text-[11px] text-slate-300 outline-none"
@@ -414,7 +437,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                        <p className="text-xs text-slate-500">Configure your statistical audit report</p>
                     </div>
                  </div>
-                 <button onClick={() => setShowExportModal(false)} className="text-slate-500 hover:text-white transition-colors"><X size={20}/></button>
+                 <button onClick={() => setShowExportModal(false)} className="text-slate-500 hover:text-white transition-colors" aria-label="Close export dialog" title="Close export dialog"><X size={20}/></button>
               </div>
 
               <div className="p-8 space-y-8">
@@ -426,8 +449,9 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                              key={fmt}
                              onClick={() => setExportConfig(prev => ({ ...prev, format: fmt }))}
                              className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all ${exportConfig.format === fmt ? 'bg-primary/10 border-primary text-white shadow-[0_0_15px_rgba(99,102,241,0.2)]' : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-700'}`}
+                             aria-pressed={exportConfig.format === fmt ? 'true' : 'false'}
                           >
-                             {fmt === 'CSV' && <FileSpreadsheet size={20}/>}
+                             {fmt === 'CSV' && <FileSpreadsheet size={20}/> }
                              {fmt === 'JSON' && <FileJson size={20}/>}
                              {fmt === 'PDF' && <FileText size={20}/>}
                              {fmt === 'Excel' && <Layout size={20}/>}
@@ -462,8 +486,11 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                  </div>
 
                  <div className="space-y-2">
-                    <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest block">File Name</label>
+                    <label htmlFor="export-filename" className="text-[10px] text-slate-500 font-bold uppercase tracking-widest block">File Name</label>
                     <input 
+                      id="export-filename"
+                      aria-label="Export filename"
+                      placeholder="mutation_history_YYYY-MM-DD.csv"
                       type="text" 
                       value={exportConfig.filename}
                       onChange={e => setExportConfig(prev => ({ ...prev, filename: e.target.value }))}
@@ -499,24 +526,25 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                 <StatCard label="Unique Genes" value={stats.genes.unique} sub="Diversity" icon={Target} color="bg-violet-500" />
               </div>
 
-              <div className="grid lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2 bg-slate-900 border border-slate-800 p-6 rounded-2xl relative">
-                  <h3 className="text-sm font-bold text-slate-400 uppercase mb-8 flex items-center gap-2">
-                    <Clock size={16} className="text-primary" /> Temporal Trend
-                  </h3>
-                  <div className="h-64 w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={timeSeriesData}>
-                        <defs>
-                          <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.3}/>
-                            <stop offset="95%" stopColor="var(--color-primary)" stopOpacity={0}/>
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-                        <XAxis dataKey="date" stroke="#475569" fontSize={10} tickLine={false} axisLine={false} />
+                <div role="radiogroup" aria-label="Export format" className="grid grid-cols-4 gap-3">
+                  {(['CSV', 'JSON', 'PDF', 'Excel'] as const).map(fmt => (
+                    <button 
+                      key={fmt}
+                      role="radio"
+                      aria-checked={exportConfig.format === fmt ? 'true' : 'false'}
+                      onClick={() => setExportConfig(prev => ({ ...prev, format: fmt }))}
+                      className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all ${exportConfig.format === fmt ? 'bg-primary/10 border-primary text-white shadow-[0_0_15px_rgba(99,102,241,0.2)]' : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-700'}`}
+                    >
+                      {fmt === 'CSV' && <FileSpreadsheet size={20}/> }
+                      {fmt === 'JSON' && <FileJson size={20}/>}
+                      {fmt === 'PDF' && <FileText size={20}/>}
+                      {fmt === 'Excel' && <Layout size={20}/>}
+                      <span className="text-[10px] font-bold tracking-widest">{fmt}</span>
+                    </button>
+                  ))}
+                </div>
                         <YAxis stroke="#475569" fontSize={10} tickLine={false} axisLine={false} />
-                        <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '12px' }} />
+                        <Tooltip content={<AreaCustomTooltip/>} />
                         <Area type="monotone" dataKey="count" stroke="var(--color-primary)" strokeWidth={3} fillOpacity={1} fill="url(#colorCount)" />
                         <Line type="monotone" dataKey="movingAvg" stroke="#22d3ee" strokeWidth={2} strokeDasharray="5 5" dot={false} />
                       </AreaChart>

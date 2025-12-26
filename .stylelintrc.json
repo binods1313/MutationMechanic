@@ -1,0 +1,31 @@
+{
+  "extends": "stylelint-config-standard",
+  "rules": {
+    "declaration-no-important": null,
+    "selector-pseudo-element-no-unknown": null,
+    "at-rule-no-unknown": [
+      true,
+      {
+        "ignoreAtRules": [
+          "tailwind",
+          "apply",
+          "responsive",
+          "screen"
+        ]
+      }
+    ],
+    "declaration-block-no-duplicate-properties": null,
+    "declaration-block-no-redundant-longhand-properties": null,
+    "no-invalid-double-slash-comments": null,
+    "no-unknown-animations": null,
+    "declaration-property-value-no-unknown": null
+  },
+  "ignoreFiles": [
+    "node_modules/**",
+    "dist/**",
+    "build/**"
+  ]
+}
+
+
+

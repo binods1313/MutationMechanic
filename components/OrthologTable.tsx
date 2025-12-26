@@ -3,6 +3,8 @@ import { OrthologInfo } from '../types/genomics';
 import { Info, Globe, ChevronDown, ChevronRight, Minimize2, Maximize2, MoreHorizontal } from 'lucide-react';
 import { storage } from '../utils/storage';
 
+const getWidthClass = (percent: number) => `w-p-${Math.round(Math.max(0, Math.min(100, percent)))}`;
+
 interface SequenceSnippetProps {
   snippet: string;
   scores?: number[];
@@ -73,59 +75,61 @@ const SequenceSnippet: React.FC<SequenceSnippetProps> = ({
       role="grid"
       aria-label={`Sequence alignment for ${species}. Use arrow keys to navigate residues.`}
     >
-      {snippet.split('').map((residue, idx) => {
-        const score = scores?.[idx] ?? 0.5;
-        const absPos = highlightPos ? highlightPos - Math.floor(snippet.length/2) + idx : idx + 1;
-        const diff = differences.find(d => d.pos === absPos);
-        const isHighlight = highlightPos && absPos === highlightPos;
-        const isFocused = focusedIdx === idx;
-        
-        return (
-          <div
-            key={idx}
-            tabIndex={0}
-            onFocus={() => setFocusedIdx(idx)}
-            onBlur={() => setFocusedIdx(null)}
-            onMouseEnter={() => setFocusedIdx(idx)}
-            onMouseLeave={() => setFocusedIdx(null)}
-            onKeyDown={(e) => handleKeyDown(e, idx)}
-            className={`
-              flex-1 h-full flex items-center justify-center relative cursor-help transition-all
-              ${getConservationColor(score)}
-              ${diff ? 'ring-1 ring-inset ring-red-500 font-bold' : ''}
-              ${isHighlight ? 'ring-2 ring-primary z-10' : ''}
-              focus:ring-2 focus:ring-white focus:z-20 outline-none
-              ${isFocused ? 'brightness-125' : ''}
-            `}
-            role="gridcell"
-            aria-label={`Position ${absPos}: ${residue}. Conservation: ${(score * 100).toFixed(2)}%`}
-          >
-            {residue}
-            
-            {isFocused && (
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-3 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl z-50 text-[10px] pointer-events-none animate-in fade-in zoom-in-95" role="tooltip">
-                <div className="font-bold text-white mb-1 uppercase tracking-widest border-b border-slate-800 pb-1">{species}</div>
-                <div className="space-y-1.5 mt-2">
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Residue:</span>
-                    <span className="font-bold text-primary">{residue}{absPos}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Conservation:</span>
-                    <span className="font-bold">{(score * 100).toFixed(2)}%</span>
-                  </div>
-                  {diff && (
-                    <div className="mt-2 pt-2 border-t border-slate-800 text-red-400 font-bold flex items-center gap-2">
-                      <AlertCircle size={10} /> Diff: {diff.ref} → {diff.alt}
+      <div role="row" className="flex w-full h-full">
+        {snippet.split('').map((residue, idx) => {
+          const score = scores?.[idx] ?? 0.5;
+          const absPos = highlightPos ? highlightPos - Math.floor(snippet.length/2) + idx : idx + 1;
+          const diff = differences.find(d => d.pos === absPos);
+          const isHighlight = highlightPos && absPos === highlightPos;
+          const isFocused = focusedIdx === idx;
+          
+          return (
+            <div
+              key={idx}
+              tabIndex={0}
+              onFocus={() => setFocusedIdx(idx)}
+              onBlur={() => setFocusedIdx(null)}
+              onMouseEnter={() => setFocusedIdx(idx)}
+              onMouseLeave={() => setFocusedIdx(null)}
+              onKeyDown={(e) => handleKeyDown(e, idx)}
+              className={`
+                flex-1 h-full flex items-center justify-center relative cursor-help transition-all
+                ${getConservationColor(score)}
+                ${diff ? 'ring-1 ring-inset ring-red-500 font-bold' : ''}
+                ${isHighlight ? 'ring-2 ring-primary z-10' : ''}
+                focus:ring-2 focus:ring-white focus:z-20 outline-none
+                ${isFocused ? 'brightness-125' : ''}
+              `}
+              role="gridcell"
+              aria-label={`Position ${absPos}: ${residue}. Conservation: ${(score * 100).toFixed(2)}%`}
+            >
+              {residue}
+              
+              {isFocused && (
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-3 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl z-50 text-[10px] pointer-events-none animate-in fade-in zoom-in-95" role="tooltip">
+                  <div className="font-bold text-white mb-1 uppercase tracking-widest border-b border-slate-800 pb-1">{species}</div>
+                  <div className="space-y-1.5 mt-2">
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Residue:</span>
+                      <span className="font-bold text-primary">{residue}{absPos}</span>
                     </div>
-                  )}
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Conservation:</span>
+                      <span className="font-bold">{(score * 100).toFixed(2)}%</span>
+                    </div>
+                    {diff && (
+                      <div className="mt-2 pt-2 border-t border-slate-800 text-red-400 font-bold flex items-center gap-2">
+                        <AlertCircle size={10} /> Diff: {diff.ref} → {diff.alt}
+                      </div>
+                    )}
+                  </div>
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900"></div>
                 </div>
-                <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900"></div>
-              </div>
-            )}
-          </div>
-        );
-      })}
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 };
@@ -142,6 +146,18 @@ const OrthologTable: React.FC<OrthologTableProps> = ({ orthologs }) => {
   const [expandedRows, setExpandedRows] = useState<Set<number>>(() => 
     storage.get('mm_ortholog_expanded', new Set([0]))
   );
+  const orthoTableRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const container = orthoTableRef.current;
+    if (!container) return;
+    const buttons = Array.from(container.querySelectorAll<HTMLButtonElement>('button[data-ortho-idx]'));
+    buttons.forEach(btn => {
+      const idx = Number(btn.dataset.orthoIdx);
+      const exp = expandedRows.has(idx) ? 'true' : 'false';
+      btn.setAttribute('aria-expanded', exp);
+    });
+  }, [expandedRows]);
 
   const toggleRow = (idx: number) => {
     const next = new Set(expandedRows);
@@ -189,7 +205,7 @@ const OrthologTable: React.FC<OrthologTableProps> = ({ orthologs }) => {
           </button>
         </div>
       </div>
-      <div className="overflow-x-auto">
+      <div ref={orthoTableRef} className="overflow-x-auto">
         <table className="w-full text-left border-collapse" role="grid">
           <thead>
             <tr className="text-[10px] text-slate-500 font-bold uppercase tracking-widest bg-slate-950 border-b border-slate-800">
@@ -209,15 +225,13 @@ const OrthologTable: React.FC<OrthologTableProps> = ({ orthologs }) => {
               return (
                 <React.Fragment key={i}>
                   <tr 
-                    className={`hover:bg-slate-800/30 transition-colors group cursor-pointer ${isExpanded ? 'bg-primary/5' : ''}`}
-                    onClick={() => toggleRow(i)}
                     role="row"
-                    aria-expanded={isExpanded}
-                    tabIndex={0}
-                    onKeyDown={(e) => e.key === 'Enter' && toggleRow(i)}
+                    className={`hover:bg-slate-800/30 transition-colors group ${isExpanded ? 'bg-primary/5' : ''}`}
                   >
                     <td className="px-6 py-4">
-                      {isExpanded ? <ChevronDown size={16} className="text-primary" /> : <ChevronRight size={16} />}
+                      <button type="button" data-ortho-idx={String(i)} onClick={() => toggleRow(i)} aria-expanded="false" aria-controls={`ortho-row-${i}`} className="flex items-center gap-2">
+                        {isExpanded ? <ChevronDown size={16} className="text-primary" /> : <ChevronRight size={16} />}
+                      </button>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
@@ -229,8 +243,7 @@ const OrthologTable: React.FC<OrthologTableProps> = ({ orthologs }) => {
                       <div className="flex items-center gap-3">
                         <div className="flex-1 h-1.5 w-24 bg-slate-800 rounded-full overflow-hidden shadow-inner">
                           <div 
-                            className={`h-full rounded-full transition-all duration-500 ${avgScore > 0.8 ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : avgScore > 0.5 ? 'bg-yellow-500' : 'bg-red-500'}`} 
-                            style={{ width: `${avgScore * 100}%` }}
+                            className={`h-full rounded-full transition-all duration-500 ${avgScore > 0.8 ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : avgScore > 0.5 ? 'bg-yellow-500' : 'bg-red-500'} ${getWidthClass(avgScore * 100)}`} 
                           />
                         </div>
                         <span className="text-xs font-mono text-slate-400">{(avgScore * 100).toFixed(1)}%</span>
@@ -250,7 +263,7 @@ const OrthologTable: React.FC<OrthologTableProps> = ({ orthologs }) => {
                     </td>
                   </tr>
                   {isExpanded && (
-                    <tr className="bg-slate-950/20">
+                    <tr id={`ortho-row-${i}`} role="row" aria-hidden="false" className="bg-slate-950/20">
                       <td colSpan={4} className="px-6 py-8 animate-in slide-in-from-top-2 duration-200">
                         <div className="space-y-4">
                           <div className="flex justify-between items-end px-1">

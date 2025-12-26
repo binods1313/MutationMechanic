@@ -36,7 +36,9 @@ function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const [currentTheme, setCurrentTheme] = useState('purple');
-  
+
+  const [explainerVariant, setExplainerVariant] = useState<string | null>(null);
+
   // Analytics State
   const [history, setHistory] = useState<HistoryRecord[]>([]);
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
@@ -76,9 +78,9 @@ function App() {
 
   const handleClearHistory = async () => {
     if (window.confirm("Permanent Action: This will wipe all historical analysis data. Proceed?")) {
-       await historyService.clearHistory();
-       fetchHistory();
-       setToast({ message: "History cleared successfully", type: 'success' });
+      await historyService.clearHistory();
+      fetchHistory();
+      setToast({ message: "History cleared successfully", type: 'success' });
     }
   };
 
@@ -104,26 +106,26 @@ function App() {
 
   const handleExport = (config: ExportConfig, ids?: string[]) => {
     const recordsToExport = ids ? history.filter(r => ids.includes(r.id)) : history;
-    
+
     let content = '';
     if (config.format === 'JSON') {
       content = JSON.stringify(recordsToExport, null, 2);
     } else if (config.format === 'CSV' || config.format === 'Excel') {
       const headers = ['ID', 'Gene', 'Variant', 'Date', 'Risk', 'Score', 'Confidence', 'Type', 'Archived'];
       const rows = recordsToExport.map(r => [
-        r.id, r.gene, r.variant, new Date(r.timestamp).toISOString(), 
+        r.id, r.gene, r.variant, new Date(r.timestamp).toISOString(),
         r.riskLevel, r.pathogenicityScore, r.confidence, r.type, r.archived ? 'YES' : 'NO'
       ]);
       content = [headers, ...rows].map(row => row.join(',')).join('\n');
     } else if (config.format === 'PDF') {
       // PDF Simulation
-      content = `PROTEIN ENGINEERING REPORT: ${config.filename}\nGenerated: ${new Date().toLocaleString()}\n\nSummary:\nTotal Analyzed: ${recordsToExport.length}\n\n` + 
-                recordsToExport.map(r => `[${r.gene}] ${r.variant} - Risk: ${r.riskLevel} (${r.confidence}% Confidence)`).join('\n');
+      content = `PROTEIN ENGINEERING REPORT: ${config.filename}\nGenerated: ${new Date().toLocaleString()}\n\nSummary:\nTotal Analyzed: ${recordsToExport.length}\n\n` +
+        recordsToExport.map(r => `[${r.gene}] ${r.variant} - Risk: ${r.riskLevel} (${r.confidence}% Confidence)`).join('\n');
     }
 
-    const mimeType = config.format === 'JSON' ? 'application/json' : 
-                     config.format === 'PDF' ? 'application/pdf' : 'text/csv';
-    
+    const mimeType = config.format === 'JSON' ? 'application/json' :
+      config.format === 'PDF' ? 'application/pdf' : 'text/csv';
+
     const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -152,7 +154,7 @@ function App() {
           </div>
 
           <TabsContent value="explainer">
-            <VariantExplainerTab variants={variants} />
+            <VariantExplainerTab variants={variants} externalVariantId={explainerVariant} />
           </TabsContent>
           <TabsContent value="design">
             <CompensatoryDesignTab />
@@ -163,39 +165,40 @@ function App() {
           <TabsContent value="splicing">
             <SplicingDecoderTab />
           </TabsContent>
-          
+
           <TabsContent value="analytics">
             <div className="space-y-12">
-               <AnalyticsDashboard 
-                 records={history} 
-                 onClear={handleClearHistory} 
-                 onExport={(cfg) => handleExport(cfg)}
-                 onBulkDelete={handleBulkDelete}
-                 onBulkArchive={handleBulkArchive}
-               />
-               <div className="space-y-6">
-                 <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                   <Clock size={20} className="text-primary" /> Audit History
-                 </h3>
-                 <HistoryTable 
-                   records={history} 
-                   onDelete={handleDeleteRecord} 
-                   onBulkDelete={handleBulkDelete}
-                   onBulkArchive={handleBulkArchive}
-                   onBulkExport={(ids) => handleExport({ 
-                    format: 'CSV', 
-                    filename: 'selected_variants_export', 
-                    includeStats: false, 
-                    includeCharts: false, 
-                    includeRecords: true, 
-                    includeMetadata: true 
-                   }, ids)}
-                   onView={(r) => { 
-                      setActiveTab('explainer');
-                      setToast({ message: `Loading detailed view for ${r.gene}...`, type: 'info' });
-                   }} 
-                 />
-               </div>
+              <AnalyticsDashboard
+                records={history}
+                onClear={handleClearHistory}
+                onExport={(cfg) => handleExport(cfg)}
+                onBulkDelete={handleBulkDelete}
+                onBulkArchive={handleBulkArchive}
+              />
+              <div className="space-y-6">
+                <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                  <Clock size={20} className="text-primary" /> Audit History
+                </h3>
+                <HistoryTable
+                  records={history}
+                  onDelete={handleDeleteRecord}
+                  onBulkDelete={handleBulkDelete}
+                  onBulkArchive={handleBulkArchive}
+                  onBulkExport={(ids) => handleExport({
+                    format: 'CSV',
+                    filename: 'selected_variants_export',
+                    includeStats: false,
+                    includeCharts: false,
+                    includeRecords: true,
+                    includeMetadata: true
+                  }, ids)}
+                  onView={(r) => {
+                    setActiveTab('explainer');
+                    setExplainerVariant(`${r.gene} ${r.hgvs_c || r.variant}`);
+                    setToast({ message: `Loading detailed view for ${r.gene}...`, type: 'info' });
+                  }}
+                />
+              </div>
             </div>
           </TabsContent>
         </Tabs>

@@ -50,6 +50,8 @@ const SplicingVisualizer: React.FC<SplicingVisualizerProps> = React.memo(({ data
     return 'Silent';
   };
 
+  const getWidthClass = (percent: number) => `w-p-${Math.round(Math.max(0, Math.min(100, percent)))}`;
+
   return (
     <div className="w-full bg-slate-900 rounded-xl border border-slate-700 p-6 shadow-inner flex flex-col hover:border-slate-600 transition-colors duration-300">
       {/* Header / Legend */}
@@ -120,8 +122,7 @@ const SplicingVisualizer: React.FC<SplicingVisualizerProps> = React.memo(({ data
             return (
               <g 
                 key={exon.exonNumber} 
-                className="group animate-in fade-in slide-in-from-bottom-4 fill-mode-backwards" 
-                style={{ animationDelay: `${idx * 100}ms` }}
+                className={`group animate-in fade-in slide-in-from-bottom-4 fill-mode-backwards anim-delay-${idx * 100}ms`} 
               >
                 {/* Connecting Intron Arc */}
                 {!isLast && (
@@ -171,7 +172,7 @@ const SplicingVisualizer: React.FC<SplicingVisualizerProps> = React.memo(({ data
                   fontWeight="bold" 
                   textAnchor="middle"
                   pointerEvents="none"
-                  style={{ textShadow: '0px 1px 2px rgba(0,0,0,0.5)' }}
+                  className="text-shadow-sm"
                 >
                   {exon.exonNumber}
                 </text>
@@ -235,8 +236,7 @@ const SplicingVisualizer: React.FC<SplicingVisualizerProps> = React.memo(({ data
                             </div>
                             <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
                                  <div 
-                                    className={`h-full rounded-full transition-all duration-500 ${accScore > 5 ? "bg-emerald-500" : "bg-red-500"}`} 
-                                    style={{width: `${accPercent}%`}}
+                                    className={`h-full rounded-full transition-all duration-500 ${accScore > 5 ? "bg-emerald-500" : "bg-red-500"} ${getWidthClass(accPercent)}`} 
                                  ></div>
                             </div>
                         </div>
@@ -253,8 +253,7 @@ const SplicingVisualizer: React.FC<SplicingVisualizerProps> = React.memo(({ data
                             </div>
                             <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
                                  <div 
-                                    className={`h-full rounded-full transition-all duration-500 ${donScore > 5 ? "bg-emerald-500" : "bg-red-500"}`} 
-                                    style={{width: `${donPercent}%`}}
+                                    className={`h-full rounded-full transition-all duration-500 ${donScore > 5 ? "bg-emerald-500" : "bg-red-500"} ${getWidthClass(donPercent)}`} 
                                  ></div>
                             </div>
                         </div>
@@ -282,7 +281,7 @@ const SplicingVisualizer: React.FC<SplicingVisualizerProps> = React.memo(({ data
           <defs>
             <pattern id="diagonalHatch" patternUnits="userSpaceOnUse" width="8" height="8">
               <path d="M-2,2 l4,-4 M0,8 l8,-8 M6,10 l4,-4" 
-                    style={{stroke: '#ef4444', strokeWidth: 1.5, opacity: 0.6}} />
+                    stroke="#ef4444" strokeWidth={1.5} opacity={0.6} />
             </pattern>
           </defs>
         </svg>

@@ -19,11 +19,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentT
           <h3 className="text-white font-semibold flex items-center gap-2">
             <SettingsIcon className="w-4 h-4 text-primary" /> Configuration
           </h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors">
-            <X size={20} />
-          </button>
-        </div>
-        
+          <button onClick={onClose} aria-label="Close settings" className="text-slate-400 hover:text-white transition-colors">
         <div className="p-6 space-y-8">
           
           {/* Theme Selection */}
@@ -35,14 +31,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentT
                {THEMES.map(theme => (
                  <button
                    key={theme.id}
+                   type="button"
                    onClick={() => onThemeChange?.(theme.id)}
                    className={`h-10 rounded-full border-2 transition-all flex items-center justify-center ${
                      currentTheme === theme.id 
                        ? 'border-white scale-110 shadow-lg' 
                        : 'border-transparent hover:scale-105'
-                   }`}
-                   style={{ backgroundColor: theme.primary }}
+                   } bg-theme-${theme.id}`}
                    title={theme.name}
+                   aria-label={theme.name}
                  >
                    {currentTheme === theme.id && <Check size={14} className="text-white drop-shadow-md" />}
                  </button>
@@ -60,7 +57,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentT
 
           <div className="flex gap-3 pt-2">
             <button 
+              type="button"
               onClick={onClose}
+              aria-label="Close settings"
               className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium py-2 rounded-lg transition-colors border border-slate-700"
             >
               Close

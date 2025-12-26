@@ -41,10 +41,9 @@ const ConfidenceHeatmap: React.FC<ConfidenceHeatmapProps> = ({ scores, sequence,
         {scores.map((score, idx) => (
           <div
             key={idx}
-            className={`h-full flex-1 ${getColor(score)} hover:opacity-80 transition-opacity`}
+            className={`h-full flex-1 min-w-[2px] ${getColor(score)} hover:opacity-80 transition-opacity`}
             onMouseEnter={() => setHoverIndex(idx)}
             onMouseLeave={() => setHoverIndex(null)}
-            style={{ minWidth: '2px' }} // Ensure visibility for long sequences
           />
         ))}
       </div>

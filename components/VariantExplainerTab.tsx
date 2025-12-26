@@ -4,15 +4,15 @@ import MechanismExplainer from './MechanismExplainer';
 import ProteinStructureViewer from './ProteinStructureViewer';
 import ConfidenceHeatmap from './ConfidenceHeatmap';
 import GenomicAnnotationPanel, { GenomicBrowser } from './GenomicAnnotationPanel';
-import AnalysisPanel from './AnalysisPanel'; 
+import AnalysisPanel from './AnalysisPanel';
 import ToastNotification, { ToastType } from './ToastNotification';
 import { VariantInfo } from '../types';
-import { GenomicContext } from '../types/genomics'; 
+import { GenomicContext } from '../types/genomics';
 import { DISEASE_VARIANTS } from '../constants';
 import { fetchUniProtInfo } from '../utils/uniprot';
 import { generateVariantReport, VariantAnalysis } from '../services/geminiService';
 import { alphafoldClient } from '../utils/alphafoldClient';
-import { genomicAnnotationService } from '../services/genomicAnnotationService'; 
+import { genomicAnnotationService } from '../services/genomicAnnotationService';
 import { historyService, MutationType } from '../services/historyService';
 
 const HISTORY_KEY = 'mutationMechanic_explainer_history';
@@ -43,27 +43,27 @@ const fetchVariantExplanation = async (variantInput: string): Promise<ExtendedAn
   const seqMut = report.variant.mutantSequence;
 
   if (seqWT && seqWT.length > 10) {
-     try {
-       const promises = [alphafoldClient.predictStructure(seqWT, `${gene}-${variant}-WT`)];
-       if (seqMut && seqMut !== seqWT) {
-         promises.push(alphafoldClient.predictStructure(seqMut, `${gene}-${variant}-MUT`));
-       }
-       const results = await Promise.all(promises);
-       report.pdbData = { native: results[0].pdb };
-       report.structureSource = results[0].source;
-       if (results[0].pdb) {
-         const pdbLines = results[0].pdb.split('\n').filter(l => l.startsWith('ATOM') && l.includes('CA '));
-         report.confidenceScores = pdbLines.map(l => {
-             const b = parseFloat(l.substring(60, 66));
-             return isNaN(b) ? 0 : b;
-         });
-       }
-       if (results.length > 1) {
-         report.pdbData.mutant = results[1].pdb;
-       }
-     } catch (e) {
-       console.warn("Structure prediction failed", e);
-     }
+    try {
+      const promises = [alphafoldClient.predictStructure(seqWT, `${gene}-${variant}-WT`)];
+      if (seqMut && seqMut !== seqWT) {
+        promises.push(alphafoldClient.predictStructure(seqMut, `${gene}-${variant}-MUT`));
+      }
+      const results = await Promise.all(promises);
+      report.pdbData = { native: results[0].pdb };
+      report.structureSource = results[0].source;
+      if (results[0].pdb) {
+        const pdbLines = results[0].pdb.split('\n').filter(l => l.startsWith('ATOM') && l.includes('CA '));
+        report.confidenceScores = pdbLines.map(l => {
+          const b = parseFloat(l.substring(60, 66));
+          return isNaN(b) ? 0 : b;
+        });
+      }
+      if (results.length > 1) {
+        report.pdbData.mutant = results[1].pdb;
+      }
+    } catch (e) {
+      console.warn("Structure prediction failed", e);
+    }
   }
   return report;
 };
@@ -109,14 +109,15 @@ interface HistoryItem {
 
 interface ExtendedAnalysis extends VariantAnalysis {
   structureSource?: string;
-  confidenceScores?: number[]; 
+  confidenceScores?: number[];
 }
 
 interface VariantExplainerTabProps {
   variants: VariantInfo[];
+  externalVariantId?: string | null;
 }
 
-const VariantExplainerTab: React.FC<VariantExplainerTabProps> = ({ variants }) => {
+const VariantExplainerTab: React.FC<VariantExplainerTabProps> = ({ variants, externalVariantId }) => {
   const [viewMode, setViewMode] = useState<'list' | 'report' | 'compare'>('list');
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -130,6 +131,39 @@ const VariantExplainerTab: React.FC<VariantExplainerTabProps> = ({ variants }) =
   const [comparisonReport, setComparisonReport] = useState<[VariantAnalysis, VariantAnalysis] | null>(null);
   const [comparisonGenomicData, setComparisonGenomicData] = useState<[GenomicContext | null, GenomicContext | null]>([null, null]);
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
+  const [structureId, setStructureId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (externalVariantId) {
+      handleExplain(externalVariantId);
+    }
+  }, [externalVariantId]);
+
+  // Auto-trigger real AlphaFold structure for fusion genes
+  useEffect(() => {
+    if (report?.variant?.protein) {
+      const gene = report.variant.protein;
+      if (gene.includes('-') || ['SMN1', 'CFTR', 'BRCA1', 'BRCA2', 'ABL1', 'ALK', 'BCR'].includes(gene)) {
+        // Auto-fetch real AlphaFold structure for fusions/clinical genes
+        import('../services/alphafoldClient').then(({ fetchAlphaFoldStructure }) => {
+          fetchAlphaFoldStructure(gene).then(structureId => {
+            setStructureId(structureId);
+            // Trigger 3D viewer with the real structure
+            loadProteinStructure(structureId);
+          }).catch(error => {
+            console.error(`Failed to fetch AlphaFold structure for ${gene}:`, error);
+          });
+        });
+      }
+    }
+  }, [report?.variant?.protein]);
+
+  // Function to load protein structure into viewer
+  const loadProteinStructure = (structureId: string) => {
+    // This would fetch the structure from backend and update the viewer
+    // Implementation depends on how structures are stored and retrieved
+    console.log(`Loading structure with ID: ${structureId}`);
+  };
 
   const handleExplain = async (variantId: string) => {
     setIsLoading(true);
@@ -144,11 +178,11 @@ const VariantExplainerTab: React.FC<VariantExplainerTabProps> = ({ variants }) =
       setIsGenomicLoading(true);
       const gData = await genomicAnnotationService.fetchAnnotations(data.variant.protein, data.variant.hgvs, variantId);
       setGenomicData(gData);
-      
+
       // Extract position and type for analytics
       const posMatch = data.variant.hgvs.match(/(\d+)/);
       const numericPos = posMatch ? parseInt(posMatch[0], 10) : undefined;
-      
+
       let mType: MutationType = 'MISSENSE';
       const notation = data.variant.hgvs.toLowerCase();
       if (notation.includes('fs') || notation.includes('del')) mType = 'FRAMESHIFT';
@@ -189,8 +223,8 @@ const VariantExplainerTab: React.FC<VariantExplainerTabProps> = ({ variants }) =
       const report2 = await fetchVariantExplanation(compareSelection[1]);
       setComparisonReport([report1, report2]);
       const genomicReqs = [
-          { gene: report1.variant.protein, variant: report1.variant.hgvs, variantId: report1.variant.id },
-          { gene: report2.variant.protein, variant: report2.variant.hgvs, variantId: report2.variant.id }
+        { gene: report1.variant.protein, variant: report1.variant.hgvs, variantId: report1.variant.id },
+        { gene: report2.variant.protein, variant: report2.variant.hgvs, variantId: report2.variant.id }
       ];
       const results = await genomicAnnotationService.fetchBatchAnnotations(genomicReqs);
       setComparisonGenomicData([results[0], results[1]]);
@@ -220,8 +254,8 @@ const VariantExplainerTab: React.FC<VariantExplainerTabProps> = ({ variants }) =
         <div>
           {isCompareMode && (
             <div className="flex justify-between items-center mb-4 bg-scientific-blue/10 p-4 rounded-lg border border-scientific-blue/20">
-               <span className="text-scientific-blue font-bold">Select 2 variants to compare shared genomic tracks</span>
-               <button onClick={runComparison} disabled={compareSelection.length !== 2 || isLoading} className="bg-scientific-blue hover:bg-cyan-600 disabled:bg-slate-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors flex items-center gap-2">{isLoading ? <Loader className="animate-spin h-4 w-4" /> : 'Run Comparison'}</button>
+              <span className="text-scientific-blue font-bold">Select 2 variants to compare shared genomic tracks</span>
+              <button onClick={runComparison} disabled={compareSelection.length !== 2 || isLoading} className="bg-scientific-blue hover:bg-cyan-600 disabled:bg-slate-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors flex items-center gap-2">{isLoading ? <Loader className="animate-spin h-4 w-4" /> : 'Run Comparison'}</button>
             </div>
           )}
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -252,24 +286,24 @@ const VariantExplainerTab: React.FC<VariantExplainerTabProps> = ({ variants }) =
           <h2 className="text-4xl font-bold flex items-center gap-3 truncate">{report.variant.protein} <span className="opacity-75 text-2xl">{report.variant.hgvs}</span></h2>
         </div>
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
-           <div className="xl:col-span-6 space-y-6">
-             <div className="bg-slate-800 p-5 rounded-xl border border-slate-700">
-                <h4 className="text-sm font-semibold text-slate-400 uppercase mb-3 flex items-center gap-2"><Dna size={14}/> Sequence Context</h4>
-                <SequenceViewer sequence={report.variant.sequence} variant={report.variant.hgvs} highlightPosition={highlightIndex} />
-                {report.confidenceScores && <div className="mt-4 pt-4 border-t border-slate-700"><ConfidenceHeatmap scores={report.confidenceScores} sequence={report.variant.sequence} /></div>}
-             </div>
-             <AnalysisPanel data={report} genomicData={genomicData} loading={false} />
-             <MechanismExplainer mechanism={report.mechanism} summary={report.analysis?.summary} />
-           </div>
-           <div className="xl:col-span-6 space-y-6">
-              <div className="bg-slate-800 rounded-xl border border-slate-700 p-6">
-                 <div className="flex justify-between items-center mb-4">
-                     <h3 className="text-xl font-bold text-white flex items-center gap-2"><Box size={20} className="text-scientific-blue" /> AlphaFold 3</h3>
-                 </div>
-                 <ProteinStructureViewer pdbData={currentPdb || null} highlightResidue={highlightIndex} loading={false} label={showMutantStructure ? 'Mutant' : 'Wild-Type'} colorBy="confidence" />
+          <div className="xl:col-span-6 space-y-6">
+            <div className="bg-slate-800 p-5 rounded-xl border border-slate-700">
+              <h4 className="text-sm font-semibold text-slate-400 uppercase mb-3 flex items-center gap-2"><Dna size={14} /> Sequence Context</h4>
+              <SequenceViewer sequence={report.variant.sequence} variant={report.variant.hgvs} highlightPosition={highlightIndex} />
+              {report.confidenceScores && <div className="mt-4 pt-4 border-t border-slate-700"><ConfidenceHeatmap scores={report.confidenceScores} sequence={report.variant.sequence} /></div>}
+            </div>
+            <AnalysisPanel data={report} genomicData={genomicData} loading={false} />
+            <MechanismExplainer mechanism={report.mechanism} summary={report.analysis?.summary} />
+          </div>
+          <div className="xl:col-span-6 space-y-6">
+            <div className="bg-slate-800 rounded-xl border border-slate-700 p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold text-white flex items-center gap-2"><Box size={20} className="text-scientific-blue" /> AlphaFold 3</h3>
               </div>
-              <GenomicAnnotationPanel data={genomicData} loading={isGenomicLoading} />
-           </div>
+              <ProteinStructureViewer pdbData={currentPdb || null} highlightResidue={highlightIndex} loading={false} label={showMutantStructure ? 'Mutant' : 'Wild-Type'} colorBy="confidence" />
+            </div>
+            <GenomicAnnotationPanel data={genomicData} loading={isGenomicLoading} />
+          </div>
         </div>
       </div>
     );
@@ -280,42 +314,42 @@ const VariantExplainerTab: React.FC<VariantExplainerTabProps> = ({ variants }) =
       <div className="space-y-8 animate-in fade-in duration-500">
         <button onClick={clearView} className="text-primary hover:text-primary-hover font-semibold flex items-center px-4 py-2 rounded-lg hover:bg-slate-800 w-fit"><ArrowLeft className="w-4 h-4 mr-2" /> Back to List</button>
         <div className="bg-slate-800 rounded-2xl border border-slate-700 p-8 shadow-xl">
-           <h2 className="text-xl font-bold text-white mb-6">Section 6.3: Shared Genomic Locus Comparison</h2>
-           <GenomicBrowser data={comparisonGenomicData[0]} compareWith={comparisonGenomicData[1]} />
-           <div className="grid grid-cols-2 gap-4 mt-6">
-              <div className="p-4 bg-red-900/10 border border-red-900/30 rounded-lg">
-                 <div className="text-[10px] text-red-400 font-bold uppercase mb-1">Variant A Needles</div>
-                 <div className="text-sm text-white font-mono">{comparisonReport[0].variant.protein} {comparisonReport[0].variant.hgvs}</div>
-              </div>
-              <div className="p-4 bg-cyan-900/10 border border-cyan-900/30 rounded-lg">
-                 <div className="text-[10px] text-cyan-400 font-bold uppercase mb-1">Variant B Needles</div>
-                 <div className="text-sm text-white font-mono">{comparisonReport[1].variant.protein} {comparisonReport[1].variant.hgvs}</div>
-              </div>
-           </div>
+          <h2 className="text-xl font-bold text-white mb-6">Section 6.3: Shared Genomic Locus Comparison</h2>
+          <GenomicBrowser data={comparisonGenomicData[0]} compareWith={comparisonGenomicData[1]} />
+          <div className="grid grid-cols-2 gap-4 mt-6">
+            <div className="p-4 bg-red-900/10 border border-red-900/30 rounded-lg">
+              <div className="text-[10px] text-red-400 font-bold uppercase mb-1">Variant A Needles</div>
+              <div className="text-sm text-white font-mono">{comparisonReport[0].variant.protein} {comparisonReport[0].variant.hgvs}</div>
+            </div>
+            <div className="p-4 bg-cyan-900/10 border border-cyan-900/30 rounded-lg">
+              <div className="text-[10px] text-cyan-400 font-bold uppercase mb-1">Variant B Needles</div>
+              <div className="text-sm text-white font-mono">{comparisonReport[1].variant.protein} {comparisonReport[1].variant.hgvs}</div>
+            </div>
+          </div>
         </div>
 
         <div className="grid lg:grid-cols-2 gap-6">
-           {comparisonReport.map((rep, idx) => (
-             <div key={idx} className="bg-slate-800 rounded-xl border border-slate-700 flex flex-col overflow-hidden h-[450px]">
-                <div className="p-3 bg-slate-900 border-b border-slate-700 flex justify-between items-center">
-                   <h3 className="font-bold text-white">{rep.variant.protein} {rep.variant.hgvs}</h3>
-                   <span className="text-xs bg-slate-800 px-2 py-1 rounded text-slate-400">RMSD: {rep.predictions.delta.rmsd.toFixed(2)}Å</span>
+          {comparisonReport.map((rep, idx) => (
+            <div key={idx} className="bg-slate-800 rounded-xl border border-slate-700 flex flex-col overflow-hidden h-[450px]">
+              <div className="p-3 bg-slate-900 border-b border-slate-700 flex justify-between items-center">
+                <h3 className="font-bold text-white">{rep.variant.protein} {rep.variant.hgvs}</h3>
+                <span className="text-xs bg-slate-800 px-2 py-1 rounded text-slate-400">RMSD: {rep.predictions.delta.rmsd.toFixed(2)}Å</span>
+              </div>
+              <div className="flex-1 relative">
+                <ProteinStructureViewer pdbData={rep.pdbData?.native || null} highlightResidue={parseInt(rep.variant.hgvs.match(/(\d+)/)?.[0] || '1', 10)} loading={!rep.pdbData?.native} label={`Variant ${idx === 0 ? 'A' : 'B'}`} colorBy="confidence" />
+              </div>
+              <div className="p-4 bg-slate-900/50 grid grid-cols-2 gap-4">
+                <div>
+                  <span className="text-[10px] text-slate-500 uppercase block font-bold">Frequency</span>
+                  <span className="text-white font-mono text-xs">{comparisonGenomicData[idx]?.frequency.gnomadGlobal.toExponential(1) || '-'}</span>
                 </div>
-                <div className="flex-1 relative">
-                   <ProteinStructureViewer pdbData={rep.pdbData?.native || null} highlightResidue={parseInt(rep.variant.hgvs.match(/(\d+)/)?.[0] || '1', 10)} loading={!rep.pdbData?.native} label={`Variant ${idx === 0 ? 'A' : 'B'}`} colorBy="confidence" />
+                <div>
+                  <span className="text-[10px] text-slate-500 uppercase block font-bold">PhyloP Score</span>
+                  <span className="text-emerald-400 font-mono font-bold text-xs">{comparisonGenomicData[idx]?.conservation.phyloP.toFixed(2) || '-'}</span>
                 </div>
-                <div className="p-4 bg-slate-900/50 grid grid-cols-2 gap-4">
-                   <div>
-                      <span className="text-[10px] text-slate-500 uppercase block font-bold">Frequency</span>
-                      <span className="text-white font-mono text-xs">{comparisonGenomicData[idx]?.frequency.gnomadGlobal.toExponential(1) || '-'}</span>
-                   </div>
-                   <div>
-                      <span className="text-[10px] text-slate-500 uppercase block font-bold">PhyloP Score</span>
-                      <span className="text-emerald-400 font-mono font-bold text-xs">{comparisonGenomicData[idx]?.conservation.phyloP.toFixed(2) || '-'}</span>
-                   </div>
-                </div>
-             </div>
-           ))}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     );

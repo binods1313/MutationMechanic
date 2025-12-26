@@ -151,10 +151,18 @@ const RiskBadge: React.FC<{ severity: string; score: number; compact?: boolean }
 
 const ConfidenceMeter: React.FC<{ confidence: number }> = memo(({ confidence }) => {
     const [width, setWidth] = useState(0);
+    const progressRef = useRef<HTMLDivElement | null>(null);
     
     useEffect(() => {
         const timer = setTimeout(() => setWidth(confidence), 100);
         return () => clearTimeout(timer);
+    }, [confidence]);
+
+    useEffect(() => {
+      if (progressRef.current) {
+        const v = String(Math.min(100, Math.max(0, Math.round(confidence || 0))));
+        progressRef.current.setAttribute('aria-valuenow', v);
+      }
     }, [confidence]);
 
     let message = "";
@@ -179,6 +187,8 @@ const ConfidenceMeter: React.FC<{ confidence: number }> = memo(({ confidence }) 
         barColor = "bg-gradient-to-r from-blue-600 to-blue-500";
     }
 
+    const getWidthClass = (percent: number) => `w-p-${Math.round(Math.max(0, Math.min(100, percent)))}`;
+
     return (
         <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-700 animate-in fade-in duration-700">
            <div className="flex justify-between items-end mb-2">
@@ -188,10 +198,9 @@ const ConfidenceMeter: React.FC<{ confidence: number }> = memo(({ confidence }) 
              </div>
              <div className={`font-bold ${colorClass}`}>{confidence}%</div>
            </div>
-           <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden mb-2 shadow-inner" role="progressbar" aria-valuenow={confidence} aria-valuemin={0} aria-valuemax={100} aria-label="Prediction Confidence">
+           <div ref={progressRef} className="w-full bg-slate-800 h-2 rounded-full overflow-hidden mb-2 shadow-inner" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="Prediction Confidence">
               <div 
-                className={`h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(255,255,255,0.1)] ${barColor}`} 
-                style={{ width: `${width}%` }}
+                className={`h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(255,255,255,0.1)] ${barColor} ${getWidthClass(width)}`} 
               ></div>
            </div>
            <p className="text-[10px] text-slate-400 text-right italic">{message}</p>
@@ -596,7 +605,7 @@ Gene Therapy: ${result.therapySuitability.geneTherapy.suitable ? 'Suitable' : 'N
           <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
              {history.length === 0 && <p className="text-slate-500 text-sm text-center py-4">No recent history.</p>}
              {history.map((item) => (
-               <div key={item.id} onClick={() => loadFromHistory(item)} className="w-full text-left bg-slate-800 hover:bg-slate-750 p-3 rounded-lg border border-slate-700 mb-2 cursor-pointer group relative" role="button" aria-label={`Load analysis for ${item.gene} ${item.variant}`}>
+               <div key={item.id} className="w-full text-left bg-slate-800 hover:bg-slate-750 p-3 rounded-lg border border-slate-700 mb-2 group relative">
                  <div className="flex justify-between items-start">
                     <div className="min-w-0 flex-1 mr-2">
                         <div className="font-bold text-white truncate" title={item.gene}>{item.gene}</div>
@@ -607,6 +616,13 @@ Gene Therapy: ${result.therapySuitability.geneTherapy.suitable ? 'Suitable' : 'N
                  <div className="mt-2 flex items-center gap-2">
                     <RiskBadge severity={item.result.clinicalSeverity} score={getSeverityScore(item.result)} compact />
                  </div>
+                 <button
+                    onClick={(e) => { e.stopPropagation(); loadFromHistory(item); }}
+                    className="absolute bottom-3 right-12 text-xs text-primary hover:underline opacity-0 group-hover:opacity-100 transition-opacity"
+                    aria-label={`Load analysis for ${item.gene} ${item.variant}`}
+                 >
+                    Load
+                 </button>
                  <button 
                     onClick={(e) => deleteFromHistory(e, item.id)}
                     className="absolute bottom-3 right-3 text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"

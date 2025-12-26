@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { MedGemmaAnalysis } from '../../types/medgemma';
 import { BrainCircuit, Activity, Pill, BookOpen, CheckCircle2, HelpCircle, AlertCircle, Clock, Link as LinkIcon, Thermometer, FlaskConical, Stethoscope, FileWarning, ClipboardList, Globe, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
 
@@ -9,6 +9,13 @@ interface ClinicalInterpretationPanelProps {
 
 const ClinicalInterpretationPanel: React.FC<ClinicalInterpretationPanelProps> = ({ data, loading }) => {
   const [expanded, setExpanded] = useState(false);
+  const treatmentBtnRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    if (treatmentBtnRef.current) {
+      treatmentBtnRef.current.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    }
+  }, [expanded]);
 
   // SECTION 3.2: Loading State
   if (loading) {
@@ -46,6 +53,8 @@ const ClinicalInterpretationPanel: React.FC<ClinicalInterpretationPanelProps> = 
     if (p.includes('Benign')) return <CheckCircle2 size={16} />;
     return <HelpCircle size={16} />;
   };
+
+  const getWidthClass = (percent: number) => `w-p-${Math.round(Math.max(0, Math.min(100, percent)))}`;
 
   // Section 6.2: Hallucination Prevention / Low Confidence Handling
   const isLowConfidence = data.confidenceScore < 60;
@@ -103,7 +112,7 @@ const ClinicalInterpretationPanel: React.FC<ClinicalInterpretationPanelProps> = 
                 <span className="text-xs text-slate-500 mb-1">({data.confidenceScore}%)</span>
               </div>
               <div className="w-full bg-slate-800 h-1.5 rounded-full mt-2">
-                 <div className={`h-full rounded-full ${data.confidenceScore > 80 ? 'bg-emerald-500' : 'bg-yellow-500'}`} style={{ width: `${data.confidenceScore}%` }}></div>
+                 <div className={`h-full rounded-full ${data.confidenceScore > 80 ? 'bg-emerald-500' : 'bg-yellow-500'} ${getWidthClass(data.confidenceScore)}`}></div>
               </div>
            </div>
         </div>
@@ -189,10 +198,11 @@ const ClinicalInterpretationPanel: React.FC<ClinicalInterpretationPanelProps> = 
         )}
 
         {/* SECTION 4.2: Interactions (Expandable) */}
-        <button 
-          onClick={() => setExpanded(!expanded)} 
+        <button
+          ref={treatmentBtnRef}
+          onClick={() => setExpanded(!expanded)}
           className="flex items-center justify-between w-full text-xs text-slate-400 hover:text-white border-t border-slate-700 pt-3"
-          aria-expanded={expanded}
+          aria-expanded="false"
           aria-controls="treatment-section"
         >
            <span className="flex items-center gap-2"><FlaskConical size={14}/> Drug Interactions & Treatments</span>
@@ -229,7 +239,7 @@ const ClinicalInterpretationPanel: React.FC<ClinicalInterpretationPanelProps> = 
         <div className="pt-3 border-t border-slate-700/50">
            <div className="flex flex-wrap gap-2 mb-3">
              {data.citations.map((cite, i) => (
-                <a key={i} href={`https://pubmed.ncbi.nlm.nih.gov/${cite.replace('PMID:', '').trim()}`} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-[10px] text-scientific-blue hover:underline bg-scientific-blue/10 px-2 py-0.5 rounded transition-colors hover:bg-scientific-blue/20">
+                <a key={i} href={`https://pubmed.ncbi.nlm.nih.gov/${cite.replace('PMID:', '').trim()}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[10px] text-scientific-blue hover:underline bg-scientific-blue/10 px-2 py-0.5 rounded transition-colors hover:bg-scientific-blue/20">
                    Based on [{cite}]
                 </a>
              ))}
@@ -247,7 +257,7 @@ const ClinicalInterpretationPanel: React.FC<ClinicalInterpretationPanelProps> = 
            {/* SECTION 6.2: Hallucination Prevention Disclaimer (With Links) */}
            <div className="bg-slate-950/50 p-2 mt-4 rounded border border-slate-800/50 text-center">
              <p className="text-[9px] text-slate-500">
-               ⚠️ <strong>AI-predicted. Verify with clinical literature.</strong> Not for diagnostic use. Cross-reference with <a href="https://www.ncbi.nlm.nih.gov/clinvar/" target="_blank" rel="noreferrer" className="underline hover:text-slate-300 transition-colors">ClinVar</a> or <a href="https://clinicalgenome.org/" target="_blank" rel="noreferrer" className="underline hover:text-slate-300 transition-colors">ClinGen</a>.
+               ⚠️ <strong>AI-predicted. Verify with clinical literature.</strong> Not for diagnostic use. Cross-reference with <a href="https://www.ncbi.nlm.nih.gov/clinvar/" target="_blank" rel="noopener noreferrer" className="underline hover:text-slate-300 transition-colors">ClinVar</a> or <a href="https://clinicalgenome.org/" target="_blank" rel="noopener noreferrer" className="underline hover:text-slate-300 transition-colors">ClinGen</a>.
              </p>
            </div>
         </div>

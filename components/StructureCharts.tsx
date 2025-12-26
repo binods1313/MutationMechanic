@@ -52,8 +52,7 @@ const StructureCharts: React.FC<StructureChartsProps> = ({ data, loading }) => {
                    <div className="w-12 h-4 bg-slate-700 rounded animate-pulse"></div>
                    <div className="flex-1 h-10 bg-slate-700/50 rounded-r-md overflow-hidden relative">
                       <div 
-                        className={`h-full bg-slate-700 rounded-r-md animate-pulse ${i===0 ? 'w-[85%]' : 'w-[60%]'}`}
-                        style={{ animationDelay: `${i * 150}ms` }}
+                        className={`h-full bg-slate-700 rounded-r-md animate-pulse ${i===0 ? 'w-[85%]' : 'w-[60%]'} ${(i===0 && 'delay-75') || (i===1 && 'delay-150') || ''}`}
                       ></div>
                    </div>
                 </div>
@@ -110,15 +109,47 @@ const StructureCharts: React.FC<StructureChartsProps> = ({ data, loading }) => {
     { subject: 'Flexibility', native: 40, mutant: 90, fullMark: 100 },
   ];
 
+  const mapHexToVariant = (hex?: string) => {
+    const mapping: Record<string, string> = {
+      '#ef4444': 'ef4444',
+      '#f59e0b': 'f59e0b',
+      '#8b5cf6': '8b5cf6',
+      '#06b6d4': '06b6d4',
+      '#6b7280': '6b7280',
+      '#10b981': '10b981'
+    };
+    const key = (hex || '').toLowerCase();
+    const normalized = mapping[key] || '6b7280';
+    return {
+      text: `text-variant-${normalized}`
+    };
+  };
+
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="p-3 rounded shadow-xl" style={{ backgroundColor: THEME.tooltipBg, borderColor: THEME.tooltipBorder, borderWidth: 1 }}>
+        <div className="p-3 rounded shadow-xl chart-tooltip">
           <p className="text-slate-200 font-bold mb-1">{label}</p>
           {payload.map((entry: any, index: number) => (
-             <p key={index} className="text-xs font-mono" style={{ color: entry.color }}>
+             <p key={index} className={`text-xs font-mono ${mapHexToVariant(entry.color).text}`}>
                {entry.name}: {entry.value}
              </p>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
+
+  const RadarCustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="p-3 rounded shadow-xl chart-tooltip">
+          <p className="text-slate-200 font-bold mb-1">{label}</p>
+          {payload.map((entry: any, index: number) => (
+            <p key={index} className={`text-xs font-mono ${mapHexToVariant(entry.color).text}`}>
+              {entry.name}: {entry.value}
+            </p>
           ))}
         </div>
       );
@@ -129,7 +160,7 @@ const StructureCharts: React.FC<StructureChartsProps> = ({ data, loading }) => {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fade-in">
       {/* Confidence Score Chart */}
-      <div className="p-6 rounded-xl border border-slate-700 shadow-sm hover:border-slate-600 transition-colors" style={{ backgroundColor: THEME.background }}>
+      <div className="p-6 rounded-xl border border-slate-700 shadow-sm hover:border-slate-600 transition-colors bg-theme-background">
         <h3 className="text-white font-semibold mb-4 flex items-center justify-between">
           <span>Global pLDDT Confidence</span>
           <span className="text-xs font-mono text-slate-400 bg-slate-900 px-2 py-1 rounded">Score (0-100)</span>
@@ -159,7 +190,7 @@ const StructureCharts: React.FC<StructureChartsProps> = ({ data, loading }) => {
       </div>
 
       {/* Structural Stability Radar */}
-      <div className="p-6 rounded-xl border border-slate-700 shadow-sm hover:border-slate-600 transition-colors" style={{ backgroundColor: THEME.background }}>
+      <div className="p-6 rounded-xl border border-slate-700 shadow-sm hover:border-slate-600 transition-colors bg-theme-background">
         <h3 className="text-white font-semibold mb-4">Structural Integrity Profile</h3>
         <div className="h-64 w-full">
           <ResponsiveContainer width="100%" height="100%">
@@ -183,11 +214,8 @@ const StructureCharts: React.FC<StructureChartsProps> = ({ data, loading }) => {
                 fill={THEME.barMutant}
                 fillOpacity={0.3}
               />
-              <Legend wrapperStyle={{ color: THEME.text }} />
-              <Tooltip 
-                contentStyle={{ backgroundColor: THEME.tooltipBg, borderColor: THEME.tooltipBorder, color: '#f8fafc' }}
-                itemStyle={{ color: '#f8fafc' }}
-              />
+              <Legend wrapperClassName="chart-legend" />
+              <Tooltip content={<RadarCustomTooltip/>} />
             </RadarChart>
           </ResponsiveContainer>
         </div>

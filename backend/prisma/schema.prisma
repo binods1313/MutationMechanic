@@ -24,6 +24,7 @@ model User {
   historyRecords      HistoryRecord[]
   comments            Comment[]
   proteinStructures   ProteinStructure[]
+  riskAssessments     RiskAssessment[]
 
   @@map("users")
 }
@@ -213,4 +214,211 @@ model ProteinStructure {
   user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   @@map("protein_structures")
+}
+
+model Patient {
+  id                String           @id @default(cuid())
+  patientId         String           @unique // MRN or external ID
+  name              String?          // Redacted in prod
+  createdAt         DateTime         @default(now())
+  variants          Variant[]
+  riskAssessments   RiskAssessment[]
+  polygenicScores   PolygenicScore[]
+  familyRisks       FamilyRisk[]
+
+  @@map("patients")
+}
+
+model Variant {
+  id             String       @id @default(cuid())
+  patientId      String
+  gene           String
+  hgvs_c         String       // c.840+2T>G
+  hgvs_p         String?      // p.Gly281*
+  genomic_coords String?      // chr5:70656000-70656001
+  ref_allele     String
+  alt_allele     String
+  zygosity       String       // homozygous/heterozygous
+  gnomad_freq    Float?       // 0.00012
+  clinvar_path   Boolean?     // true/false/null
+  acmg_class     String?      // PVS1, PS2, etc
+  patient        Patient      @relation(fields: [patientId], references: [id])
+  predictions    Prediction[]
+  structureFiles StructureFile[]
+  riskAssessments RiskAssessment[] // Related risk assessments
+  familyRisks    FamilyRisk[] // Related family risks
+  annotations    Json?        // ClinVar, OMIM, dbNSFP
+
+  @@unique([patientId, gene, hgvs_c])
+  @@index([gene])
+  @@index([acmg_class])
+  @@map("variants")
+}
+
+model Prediction {
+  id             String        @id @default(cuid())
+  variantId      String
+  modelId        String        // Links to ModelRegistry
+  model_name     String        // "gemini-1.5-pro", "alphafold3"
+  model_version  String        // "20241217"
+  model_provider String        // "google", "deepmind"
+  model_hash     String?       // Git SHA for custom models
+  training_data  String?       // "gnomad_v4.1"
+  hyperparameters Json?        // {temp: 0.7, top_p: 0.9}
+  raw_prompt     String?       @db.Text // Full input to LLM
+  raw_response   String?       @db.Text // Full LLM output
+  parsed_output  Json          // Clean structured data
+  confidence     Float?        // 0.92
+  execution_time Int           // ms
+  cost_usd       Float?        // 0.0023
+  createdAt      DateTime      @default(now())
+  variant        Variant       @relation(fields: [variantId], references: [id])
+  model          ModelRegistry @relation(fields: [modelId], references: [id])
+
+  @@index([modelId, model_version])
+  @@map("predictions")
+}
+
+model ModelRegistry {
+  id            String       @id @default(cuid())
+  name          String       // "SplicingAI", "AlphaFold3"
+  version       String       // "v2.1.0"
+  provider      String       // "google", "deepmind", "local"
+  api_endpoint  String?      // "https://api.alphafold.com/v1"
+  input_schema  Json?        // Expected input format
+  output_schema Json?        // Expected output format
+  is_active     Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  predictions   Prediction[]
+
+  @@unique([name, version])
+  @@index([provider, is_active])
+  @@map("model_registry")
+}
+
+model StructureFile {
+  id         String   @id @default(cuid())
+  variantId  String
+  file_type  String   // "pdb", "cif", "plddt_json", "splicing_plot"
+  file_name  String   // "SMN1_c.840+2T>G_mutant.pdb"
+  file_size  Int      // bytes
+  s3_key     String?  // For production: "structures/abc.pdb"
+  local_path String?  // For dev: "./storage/SMN1_mutant.pdb"
+  checksum   String   // SHA256: "a1b2c3..."
+  uploadedAt DateTime @default(now())
+  variant    Variant  @relation(fields: [variantId], references: [id])
+
+  @@index([variantId, file_type])
+  @@map("structure_files")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  action     String   // "variant_analyzed", "structure_uploaded"
+  entityId   String   // variant ID or structure ID
+  entityType String   // "Variant", "StructureFile"
+  oldValues  Json?
+  newValues  Json?
+  ipAddress  String?  // Redacted: "xxx.xxx.xxx.xxx"
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model RiskAssessment {
+  id                       String              @id @default(cuid())
+  userId                   String?
+  variantId                String?
+  patientId                String              // Links to Patient.id
+  diseaseType              String              // "cardiovascular", "cancer", "neurodegenerative"
+  riskScore                Float               // 0.0 - 1.0 scale
+  biologicalAge            Int?                // Estimated biological age
+  relativeRisk             Float               // vs population baseline
+  confidenceIntervalLower  Float               // Lower bound of confidence interval
+  confidenceIntervalUpper  Float               // Upper bound of confidence interval
+  riskTrajectoryCurrent    Float?              // Current risk level
+  riskTrajectory5Year      Float?              // 5-year projected risk
+  riskTrajectory10Year     Float?              // 10-year projected risk
+  riskTrajectoryLifetime   Float?              // Lifetime risk
+  severityLevel            String              // "low", "moderate", "high", "actionable"
+  riskCategory             String              // "green", "yellow", "red", "purple"
+  createdAt                DateTime            @default(now())
+  updatedAt                DateTime            @updatedAt
+
+  // Relationships
+  user                     User?               @relation(fields: [userId], references: [id], onDelete: SetNull)
+  variant                  Variant?            @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  patient                  Patient             @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  interventions            Intervention[]
+
+  @@index([patientId])
+  @@index([diseaseType])
+  @@index([riskScore])
+  @@map("risk_assessments")
+}
+
+model Intervention {
+  id                       String              @id @default(cuid())
+  riskAssessmentId         String
+  interventionType         String              // "lifestyle", "pharmacological", "screening", "supplement"
+  interventionName         String              // "statins", "colonoscopy", "mediterranean diet"
+  interventionDescription  String?
+  evidenceLevel            String              // "A", "B", "C" grade
+  expectedRiskReduction    Float?              // Expected % risk reduction
+  preventableYears         Int?                // Years of life potentially gained
+  recommended              Boolean             @default(true)
+  implemented              Boolean             @default(false)
+  implementationDate       DateTime?
+  createdAt                DateTime            @default(now())
+  updatedAt                DateTime            @updatedAt
+
+  // Relationships
+  riskAssessment           RiskAssessment      @relation(fields: [riskAssessmentId], references: [id], onDelete: Cascade)
+
+  @@index([riskAssessmentId])
+  @@index([interventionType])
+  @@map("interventions")
+}
+
+model PolygenicScore {
+  id                       String              @id @default(cuid())
+  patientId                String              // Links to Patient.id
+  diseaseType              String              // "coronary_artery_disease", "type_2_diabetes", etc.
+  prsScore                 Float               // Polygenic risk score value
+  prsPercentile            Float               // Percentile ranking vs reference population
+  referencePopulation      String              // "European", "African", etc.
+  variantCount             Int                 // Number of variants included in score
+  createdAt                DateTime            @default(now())
+  updatedAt                DateTime            @updatedAt
+
+  // Relationships
+  patient                  Patient             @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@unique([patientId, diseaseType])
+  @@index([diseaseType])
+  @@index([prsScore])
+  @@map("polygenic_scores")
+}
+
+model FamilyRisk {
+  id                       String              @id @default(cuid())
+  patientId                String              // The index patient
+  relativeType             String              // "parent", "sibling", "child", "cousin"
+  relationship             String              // "maternal", "paternal" for specifying side
+  variantId                String?             // Associated variant if known
+  recurrenceRisk           Float               // Calculated recurrence risk
+  inheritancePattern       String              // "autosomal_dominant", "autosomal_recessive", "x_linked", "complex"
+  geneticCounselingNeeded  Boolean             @default(false)
+  createdAt                DateTime            @default(now())
+  updatedAt                DateTime            @updatedAt
+
+  // Relationships
+  patient                  Patient             @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  variant                  Variant?            @relation(fields: [variantId], references: [id], onDelete: SetNull)
+
+  @@index([patientId])
+  @@index([relativeType])
+  @@map("family_risks")
 }

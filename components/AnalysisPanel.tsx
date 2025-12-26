@@ -126,8 +126,10 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ data, genomicData, loadin
           {analysis.compensatory_mutations.map((mut, idx) => (
             <div 
               key={idx} 
-              className="group bg-slate-900/50 hover:bg-slate-900 border border-slate-800 hover:border-scientific-blue/40 transition-all rounded-lg p-4 relative overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-500 fill-mode-backwards"
-              style={{ animationDelay: `${idx * 150}ms` }}
+              className={`group bg-slate-900/50 hover:bg-slate-900 border border-slate-800 hover:border-scientific-blue/40 transition-all rounded-lg p-4 relative overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-500 fill-mode-backwards ${(() => {
+                const delays = ['delay-75','delay-150','delay-200','delay-300','delay-500','delay-700','delay-1000'];
+                return delays[Math.min(idx, delays.length - 1)];
+              })()}`}
             >
               <div className="absolute left-0 top-0 bottom-0 w-1 bg-scientific-blue opacity-0 group-hover:opacity-100 transition-opacity"></div>
               
@@ -144,8 +146,7 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ data, genomicData, loadin
                   <button 
                     onClick={() => setSelectedMutationInfo(idx)}
                     className="text-slate-500 hover:text-white transition-colors p-1"
-                    title="View detailed reasoning"
-                  >
+                    title="View detailed reasoning"                    aria-label={`View reasoning for ${mut.mutation}`}                  >
                     <Info size={16} />
                   </button>
                 </div>
@@ -155,7 +156,7 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ data, genomicData, loadin
                 {mut.reasoning}
               </p>
               
-              <button className="text-xs text-primary hover:text-white flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all transform translate-x-[-10px] group-hover:translate-x-0 duration-300 relative z-10">
+<button className="text-xs text-primary hover:text-white flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all transform translate-x-[-10px] group-hover:translate-x-0 duration-300 relative z-10" aria-label={`Simulate variant ${mut.mutation}`}>
                 Simulate this variant <ArrowRight size={12} />
               </button>
 
@@ -170,6 +171,8 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ data, genomicData, loadin
                       <button 
                         onClick={() => setSelectedMutationInfo(null)}
                         className="text-slate-400 hover:text-white transition-colors"
+                        aria-label="Close details"
+                        title="Close details"
                       >
                         <X size={16}/>
                       </button>

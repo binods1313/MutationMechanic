@@ -23,6 +23,7 @@ const VariantSelector: React.FC<VariantSelectorProps> = ({ selectedId, onSelect,
             value={selectedId}
             onChange={(e) => onSelect(e.target.value)}
             disabled={loading}
+            aria-label="Select variant"
             className="w-full appearance-none bg-slate-900 border border-slate-700 text-white py-3 px-4 pr-10 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50 transition-opacity"
           >
             <option value="" disabled>Select a variant...</option>

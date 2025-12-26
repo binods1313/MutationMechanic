@@ -989,3 +989,16 @@ export const MOCK_ANALYSIS: Record<string, AnalysisResponse> = {
     }
   }
 };
+
+// UNIPROT mapping for fusions/clinical genes
+export const UNIPROT_MAP = {
+  'BCR-ABL1': 'P00519',
+  'EML4-ALK': 'Q9UM73',
+  'SMN1': 'Q16637',
+  'CFTR': 'P13569',
+  'BRCA1': 'P38398',
+  'BRCA2': 'P51587',
+  'ABL1': 'P00519',
+  'ALK': 'Q9UM73',
+  'BCR': 'P11274'
+};

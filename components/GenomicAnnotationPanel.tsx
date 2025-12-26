@@ -27,6 +27,12 @@ const PTM_COLORS: Record<string, string> = {
   'Default': '#94a3b8'
 };
 
+// Helpers to map PTM types to CSS classes (avoid inline styles)
+const slugify = (s: string) => s.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9\-]/g, '');
+const getPtmBgClass = (type?: string) => `bg-ptm-${slugify(type || 'Default')}`;
+const getLeftClass = (percent: number) => `left-p-${Math.round(Math.max(0, Math.min(100, percent)))}`;
+const getWidthClass = (value: number) => `w-p-${Math.round(Math.max(0, Math.min(100, value * 100)))}`;
+
 const PTMPinnedPanel: React.FC<{ ptm: PTM; onClose: () => void }> = ({ ptm, onClose }) => {
   const panelRef = useRef<HTMLDivElement>(null);
   const closeBtnRef = useRef<HTMLButtonElement>(null);
@@ -90,8 +96,7 @@ const PTMPinnedPanel: React.FC<{ ptm: PTM; onClose: () => void }> = ({ ptm, onCl
       <div className="p-6 flex-1 overflow-y-auto space-y-8 custom-scrollbar">
         <div className="flex items-center gap-4">
           <div 
-            className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg border border-white/5"
-            style={{ backgroundColor: PTM_COLORS[ptm.type] || PTM_COLORS['Default'] }}
+            className={`w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg border border-white/5 ${getPtmBgClass(ptm.type)}`}
           >
             <Circle size={32} fill="white" stroke="none" />
           </div>
@@ -132,7 +137,7 @@ const PTMPinnedPanel: React.FC<{ ptm: PTM; onClose: () => void }> = ({ ptm, onCl
               <a 
                 href={ptm.url} 
                 target="_blank" 
-                rel="noreferrer" 
+                rel="noopener noreferrer" 
                 className="flex items-center justify-center gap-2 w-full py-3 bg-slate-800 hover:bg-slate-700 rounded-xl text-sm text-white font-bold transition-all shadow-lg active:scale-95"
               >
                 <ExternalLink size={16}/> Open Experimental Source
@@ -163,6 +168,18 @@ const PTMVisualization: React.FC<{ ptms: PTM[]; proteinLength: number }> = ({ pt
   const [showTable, setShowTable] = useState(false);
   const [pinnedPtm, setPinnedPtm] = useState<PTM | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const ptmButtonsRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const container = ptmButtonsRef.current;
+    if (!container) return;
+    const buttons = Array.from(container.querySelectorAll<HTMLButtonElement>('button[data-ptm-type]'));
+    buttons.forEach(btn => {
+      const type = btn.dataset.ptmType ?? '';
+      const pressed = selectedTypes.has(type as string);
+      btn.setAttribute('aria-pressed', pressed ? 'true' : 'false');
+    });
+  }, [selectedTypes]);
 
   const ptmTypesWithCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -206,6 +223,8 @@ const PTMVisualization: React.FC<{ ptms: PTM[]; proteinLength: number }> = ({ pt
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  const pinnedLeftClass = pinnedPtm ? getLeftClass((pinnedPtm.position / proteinLength) * 100) : undefined;
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -242,26 +261,30 @@ const PTMVisualization: React.FC<{ ptms: PTM[]; proteinLength: number }> = ({ pt
             />
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div ref={ptmButtonsRef} className="flex flex-wrap gap-2">
             {ptmTypesWithCounts
               .filter(([type]) => type.toLowerCase().includes(searchQuery.toLowerCase()))
-              .map(([type, count]) => (
+              .map(([type, count]) => {
+                const isSelected = selectedTypes.has(type);
+              return (
               <button 
                 key={type} 
+                data-ptm-type={type}
                 onClick={() => toggleType(type)}
                 className={`px-4 py-2 rounded-xl text-[11px] font-bold border transition-all flex items-center gap-2 group ${
-                  selectedTypes.has(type) 
+                  isSelected 
                     ? 'bg-primary border-primary text-white shadow-lg shadow-primary/20' 
                     : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-700 hover:text-slate-300'
                 }`}
-                aria-pressed={selectedTypes.has(type)}
+                aria-pressed="false"
               >
                 {type}
-                <span className={`text-[9px] px-1.5 rounded-md ${selectedTypes.has(type) ? 'bg-white/20' : 'bg-slate-900 group-hover:bg-slate-800'}`}>
+                <span className={`text-[9px] px-1.5 rounded-md ${isSelected ? 'bg-white/20' : 'bg-slate-900 group-hover:bg-slate-800'}`}>
                   {count}
                 </span>
               </button>
-            ))}
+            );
+            })()}
           </div>
 
           {(selectedTypes.size > 0 || searchQuery || minConf > 0) && (
@@ -297,27 +320,24 @@ const PTMVisualization: React.FC<{ ptms: PTM[]; proteinLength: number }> = ({ pt
             {/* Visual Highlight for Pinned PTM */}
             {pinnedPtm && (
                <div 
-                 className="absolute top-1/2 -translate-y-1/2 h-12 w-12 bg-primary/20 rounded-full blur-xl animate-pulse"
-                 style={{ left: `calc(${(pinnedPtm.position / proteinLength) * 100}% - 24px)` }}
+                 className={`absolute top-1/2 ${pinnedLeftClass} -translate-y-1/2 -translate-x-1/2 h-12 w-12 bg-primary/20 rounded-full blur-xl animate-pulse`}
                />
             )}
 
             {filteredPtms.map((ptm, i) => {
               const pos = (ptm.position / proteinLength) * 100;
-              const color = PTM_COLORS[ptm.type] || PTM_COLORS['Default'];
+              const leftClass = getLeftClass(pos);
               const isPinned = pinnedPtm?.id === ptm.id || (pinnedPtm?.position === ptm.position && pinnedPtm?.type === ptm.type);
 
               return (
                 <button 
                   key={i} 
-                  className={`absolute top-1/2 -translate-y-1/2 outline-none z-10 p-2 group/icon transition-all duration-300 ${isPinned ? 'scale-150 z-20' : 'hover:scale-125'}`}
-                  style={{ left: `calc(${pos}% - 20px)` }}
+                  className={`absolute top-1/2 ${leftClass} -translate-y-1/2 -translate-x-1/2 outline-none z-10 p-2 group/icon transition-all duration-300 ${isPinned ? 'scale-150 z-20' : 'hover:scale-125'}`}
                   onClick={() => setPinnedPtm(ptm)}
                   aria-label={`${ptm.type} at ${ptm.residue}${ptm.position}. Confidence ${ptm.confidence}`}
                 >
                   <div 
-                    className={`w-4 h-4 rounded-full border-2 transition-all shadow-lg ${isPinned ? 'border-white' : 'border-slate-900 group-hover/icon:border-white'}`}
-                    style={{ backgroundColor: color, boxShadow: isPinned ? `0 0 15px ${color}` : 'none' }}
+                    className={`w-4 h-4 rounded-full border-2 transition-all ${isPinned ? 'border-white shadow-lg scale-110' : 'border-slate-900 group-hover/icon:border-white'} ${getPtmBgClass(ptm.type)}`}
                   />
                   <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 opacity-0 group-hover/icon:opacity-100 transition-all scale-75 group-hover/icon:scale-100 whitespace-nowrap bg-slate-800 px-3 py-1.5 rounded-lg text-[10px] font-bold text-white border border-slate-700 shadow-2xl pointer-events-none z-30">
                     {ptm.type} <span className="text-primary ml-1">{ptm.residue}{ptm.position}</span>
@@ -356,7 +376,7 @@ const PTMVisualization: React.FC<{ ptms: PTM[]; proteinLength: number }> = ({ pt
                       >
                          <td className="px-5 py-4">
                            <div className="flex items-center gap-3">
-                              <div className="w-2 h-2 rounded-full shadow-sm" style={{ backgroundColor: PTM_COLORS[p.type] || PTM_COLORS['Default'] }} />
+                              <div className={`w-2 h-2 rounded-full shadow-sm ${getPtmBgClass(p.type)}`} />
                               <span className="font-bold text-slate-200 group-hover:text-primary transition-colors">{p.type}</span>
                            </div>
                          </td>
@@ -364,7 +384,7 @@ const PTMVisualization: React.FC<{ ptms: PTM[]; proteinLength: number }> = ({ pt
                          <td className="px-5 py-4">
                            <div className="flex items-center gap-3">
                              <div className="h-1.5 w-16 bg-slate-800 rounded-full overflow-hidden shadow-inner">
-                               <div className="h-full bg-emerald-500 transition-all duration-700" style={{ width: `${(p.confidence ?? 0)*100}%` }}/>
+                               <div className={`h-full bg-emerald-500 transition-all duration-700 ${getWidthClass(p.confidence ?? 0)}`}/>
                              </div>
                              <span className="text-[10px] text-slate-500 font-mono">{(p.confidence ?? 0).toFixed(2)}</span>
                            </div>

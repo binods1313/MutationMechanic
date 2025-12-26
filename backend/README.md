@@ -57,7 +57,23 @@ npm run db:push
 
 ## API Endpoints
 
-- `GET /api/health` - Health check
+- `GET /api/health` - Health check (returns JSON with app and database status)
+
+## Testing
+
+The backend includes a comprehensive test suite using Jest and Supertest.
+
+1. **Run all tests**:
+```bash
+npm test
+```
+
+2. **Unit Tests**:
+- `tests/unit/logger.test.ts`: Verifies secure logging and redaction.
+- `tests/unit/health.test.ts`: Verifies health check status logic.
+
+3. **Integration Tests**:
+- `tests/integration/api.test.ts`: Verifies core API endpoints for Users and Analyses.
 - `POST /api/users` - Create user
 - `GET /api/users/:id` - Get user details
 - `POST /api/analyses` - Create analysis

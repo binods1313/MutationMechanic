@@ -1,194 +1,125 @@
-Task: Fix backend Prisma startup crash and verify environment, DB, and integrations
-Goal: Get the backend running locally without the Prisma client crash, ensure DATABASE_URL is loaded at runtime, regenerate Prisma client, and verify basic API and integration health. Deliver fixes on a feature branch and report results.
-
-Ready-to-paste prompt for your coder
-Code
-Task: Diagnose and fix Prisma client crash; validate env, DB, and basic integrations
-
-Context
-- Repo: MutationMechanic (you have full access).
-- Problem: Backend crashes at startup when `new PrismaClient()` is called. Error shows Prisma client instantiation failure and nodemon restarts.
-- Objective: Ensure backend sees DATABASE_URL at runtime, load .env correctly, regenerate Prisma client, start backend successfully, and verify a few endpoints and integrations (AlphaFold/MedGemma fallbacks).
-
-Requirements (apply in order)
-
-1) Create a feature branch
-- Branch name: fix/prisma-env-startup
-- Commit small, focused changes with clear messages.
-
-2) Ensure dotenv is loaded before PrismaClient
-- Open the backend entry file referenced in the crash (likely `backend/src/server.ts` or `backend/src/index.ts`).
-- **Add at the very top** (before any other imports that might import Prisma):
-  ```ts
-  // MUST be first
-  import 'dotenv/config';
-or:
-
-ts
-import dotenv from 'dotenv';
-dotenv.config();
-Confirm import 'dotenv/config' runs before import { PrismaClient } from '@prisma/client' and before any code that instantiates Prisma.
-
-Confirm .env location and DATABASE_URL presence
-
-Identify which .env the backend expects (backend/.env or project root .env). If multiple, document which one is used in dev.
-
-Ensure the backend .env contains a DATABASE_URL= line. Example formats:
-
-Postgres: DATABASE_URL="postgresql://user:pass@localhost:5432/dbname?schema=public"
-
-SQLite: DATABASE_URL="file:./dev.db"
-
-Fix formatting issues: remove stray quotes/spaces/CRLF problems.
-
-Do NOT commit secrets. If missing, add instructions in README for how to set the variable locally.
-
-Make sure dev script loads env (if needed)
-
-Inspect backend/package.json scripts.dev. If it runs node or ts-node without -r dotenv/config, update dev script to ensure env is loaded:
-
-json
-"dev": "ts-node -r dotenv/config src/server.ts"
-or ensure nodemon uses -r dotenv/config:
-
-json
-"dev": "nodemon --watch src -r dotenv/config --exec ts-node src/server.ts"
-If you prefer not to change scripts, ensure import 'dotenv/config' is present in the entry file (step 2).
-
-Regenerate Prisma client
-
-From backend folder run:
-
-Code
-npx prisma generate
-If engine download errors occur, try:
-
-PowerShell:
-
-Code
-$env:PRISMA_CLIENT_ENGINE_TYPE="library"
-npx prisma generate
-Or set the same env var in your dev environment.
-
-Start backend and capture logs
-
-Start backend:
-
-Code
-npm run dev
-(from backend folder; or follow repo README if different)
-
-If it still crashes, start with debug logs:
-
-PowerShell:
-
-Code
-$env:DEBUG="*"
-$env:PRISMA_LOG_LEVEL="info"
-npm run dev
-Copy any Prisma-related error lines and paste them into the report.
-
-Verify DATABASE_URL visibility (quick check)
-
-In backend PowerShell before starting server:
-
-Code
-if ($env:DATABASE_URL) { "DATABASE_URL is set" } else { "DATABASE_URL is NOT set" }
-If NOT set, set it temporarily to test:
-
-Code
-$env:DATABASE_URL="your_database_url_here"
-npm run dev
-(Replace with a valid connection string for testing only; do not commit.)
-
-Verify basic endpoints
-
-Once backend runs, test these endpoints and record responses:
-
-Health: GET http://localhost:<backend-port>/api/health (or /api/status)
-
-Example data endpoint used by frontend: e.g., GET /api/variants or GET /api/presets
-
-AlphaFold proxy (if present): POST /api/alphafold with a minimal payload
-
-MedGemma proxy (if present): POST /api/medgemma/interpret (use mock token if needed)
-
-Use curl or Postman and include required headers. Record status codes and sample JSON.
-
-Confirm Prisma DB connectivity
-
-Run:
-
-Code
-npx prisma -v
-npx prisma generate
-npx prisma db pull
-If using migrations:
-
-Code
-npx prisma migrate status
-Report any errors.
-
-Mock/fallback behavior
-
-Simulate backend or external API failure (stop backend or block endpoint) and confirm frontend fallback behavior if applicable. Document which mock data files are used and whether UI shows fallback messages.
-
-Logging and fixes
-
-If you make code/config changes beyond dotenv import, include minimal, well-documented edits and tests.
-
-Add defensive logging around Prisma instantiation to surface missing env var:
-
-ts
-console.log('DATABASE_URL present:', !!process.env.DATABASE_URL);
-Re-run npm run dev and confirm backend starts without crash.
-
-Deliverables
-
-Branch: fix/prisma-env-startup with commits for changes.
-
-File edits: list of files changed and short rationale.
-
-Diagnostics doc: docs/diagnostics/prisma-env-startup.md containing:
-
-Commands run and outputs (prisma generate, prisma -v, npm run dev logs)
-
-Health endpoint responses (status + sample JSON)
-
-Any errors encountered and how they were fixed
-
-If any env vars are missing, list the exact env var names and example formats (do not include secrets)
-
-If external APIs (AlphaFold/MedGemma) are unreachable, include recommended config steps and sample mock payloads.
-
-Acceptance criteria
-
-npm run dev in backend starts without Prisma client crash.
-
-if ($env:DATABASE_URL) prints DATABASE_URL is set in the backend shell when started normally (i.e., env loaded from .env or dev script).
-
-npx prisma generate runs successfully and node_modules/@prisma/client exists.
-
-Health endpoint returns 200 and expected JSON.
-
-Short diagnostics doc committed to the branch.
-
-Notes and constraints
-
-Do not commit secrets or real credentials to the repo.
-
-If Node engine/binary errors persist and point to Node v22 incompatibility, document that and test with Node 18 or 20 (use nvm) and report results.
-
-Keep changes minimal and reversible; prefer adding import 'dotenv/config' over changing many scripts unless necessary.
-
-Report back here with:
-
-Branch name and commit summary
-
-npx prisma -v and npx prisma generate outputs
-
-npm run dev logs (if still failing, paste Prisma error lines)
-
-Result of health endpoint and any sample responses
-
-Any remaining blockers or recommended next steps
+Plan: fix four ARIA errors by standardizing boolean ARIA attributes and using appropriate elements.
+
+File 1: GenomicAnnotationPanel.tsx
+
+Issue: aria-pressed or aria-expanded values are not booleans or not on a suitable element.
+Target blocks:
+Look for aria-pressed usage
+Look for aria-expanded usage
+Example patch (adjust line numbers to match your file):
+
+Before (example, lines 50-60):
+50: <div onClick={togglePressed} aria-pressed={pressed ? "true" : "false"}>
+51: Toggle
+52: </div>
+
+After (lines 50-53):
+50: <button onClick={togglePressed} aria-pressed={pressed}>
+51: Toggle
+52: </button>
+
+Before (example, lines 120-130):
+120: <div className="panel" aria-expanded={isOpen ? "open" : "closed"}>
+121: <Header />
+122: </div>
+
+After (lines 120-124):
+120: <div className="panel" aria-expanded={isOpen}>
+121: <Header />
+122: </div>
+123: // If you must keep a non-button toggle, wrap with a button element and use a boolean
+124: // Or ensure isOpen is a boolean and the element has a role that makes sense.
+
+Key checks:
+
+aria-pressed should be boolean (true/false) on a button or role="button".
+aria-expanded should be boolean on the collapsible region; ensure visibility mirrors isOpen.
+Ensure no string "true"/"false" remains when you pass a boolean in JSX.
+File 2: OrthologTable.tsx
+
+Issue: aria-valuenow or incorrect boolean for expandable row or slider.
+Target blocks:
+Search for aria-expanded or aria-valuenow usage (likely in table rows or expandable sections)
+Example patch (lines approximate):
+
+Before (lines 40-45):
+40: <tr aria-expanded={expanded ? "true" : "false"}>...</tr>
+
+After (lines 40-42):
+40: <tr aria-expanded={expanded}>...</tr>
+
+If a slider/range is used:
+
+Before (lines 60-66):
+60: <div role="slider" aria-valuenow={value} aria-valuemin={0} aria-valuemax={100}>
+61: ...
+66: </div>
+After (lines 60-66):
+60: <input type="range" min={0} max={100} value={value} onChange={handleChange} />
+61: ...
+66:
+Notes:
+Prefer native input elements for sliders/ranges (type="range") to avoid complex ARIA states.
+
+If keeping a div with role="slider", ensure aria-valuenow is a number, and aria-valuemin/max are numbers, and the value updates in sync.
+
+File 3: ClinicalInterpretationPanel.tsx
+
+Issue: aria-pressed or aria-expanded on non-interactive elements or with non-boolean values.
+Target blocks:
+aria-pressed on a toggle control
+aria-expanded on a collapsible section
+Patch example:
+
+Before (aria-pressed on div, lines around 28-34):
+28: <div onClick={handleClick} aria-pressed={pressed ? "true" : "false"}>
+29: Interpret
+30: </div>
+
+After (lines 28-31):
+28: <button onClick={handleClick} aria-pressed={pressed}>
+29: Interpret
+30: </button>
+
+Before (lines 70-76, aria-expanded):
+70: <div className="section" aria-expanded={open ? "open" : "closed"}>
+71: Details
+72: </div>
+
+After (lines 70-72):
+70: <div className="section" aria-expanded={open}>
+71: Details
+72: </div>
+
+File 4: SplicingDecoderTable.tsx
+
+Issue: aria-valuenow or aria-expanded misused in table/deck sections.
+Target blocks:
+Expandable row or header with aria-expanded
+Any slider-like control with aria-valuenow
+Patch example:
+
+Before (lines 12-18):
+12: <tr aria-expanded={isOpen ? "true" : "false"}>
+13: ...
+18: </tr>
+
+After (lines 12-14):
+12: <tr aria-expanded={isOpen}>
+13: ...
+14: </tr>
+
+If a value indicator exists (lines around 40-46):
+40: <div role="slider" aria-valuenow={sliderValue} aria-valuemin={0} aria-valuemax={100}>
+41: ...
+46: </div>
+
+After (lines 40-41):
+40: <input type="range" min={0} max={100} value={sliderValue} onChange={handleSlider} />
+41:
+
+General guidance you can hand off with exact line numbers:
+
+Replace non-boolean ARIA attributes with proper booleans or use native elements.
+If an element is interactive, prefer a native element (button, input, details/summary) and use ARIA to augment if needed.
+Ensure all aria-valuenow, aria-valuemin, aria-valuemax are numbers and in-range.
