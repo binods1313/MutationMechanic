@@ -29,12 +29,14 @@ AI-driven protein engineering dashboard for analyzing pathogenicity, structural 
     ```
 
 2.  **Environment Configuration**
-    Create a `.env` file in the root:
+    Create a `.env` file in the root (recommended: `.env.local` for frontend):
     ```env
     # Optional: For Live AI Analysis
     REACT_APP_GEMINI_API_KEY=your_key_here
     ```
     *Note: The app runs in "Simulation Mode" with mock data if no keys are provided.*
+
+    **See** `docs/ENV.md` for a complete list of environment variables, example `.env`/`.env.local` snippets, and deployment notes on secrets management.
 
 3.  **Start Development Server**
     ```bash
