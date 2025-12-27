@@ -42,6 +42,8 @@ const Header: React.FC<HeaderProps> = ({ onOpenSettings }) => {
               className="text-slate-400 hover:text-white transition-colors p-2"
               aria-label="View repository on GitHub"
               title="View repository on GitHub"
+              target="_blank"
+              rel="noopener noreferrer"
             >
               <Github className="h-5 w-5" />
             </a>

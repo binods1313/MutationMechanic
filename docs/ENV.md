@@ -12,8 +12,9 @@ Required / useful variables:
 
 - **VITE_GEMINI_API_KEY** — Google GenAI / Gemini API key. This is mapped into the frontend as `process.env.API_KEY` in `vite.config.ts` so components and services check `process.env.API_KEY`.
 - **VITE_ALPHAGENOME_API_KEY** — AlphaGenome API key (used by genomic services).
-- **VITE_ALPHAGENOME_API_URL** or `REACT_APP_ALPHAGENOME_API_URL` — AlphaGenome base URL (the code reads `REACT_APP_ALPHAGENOME_API_URL` in some services).
-- Optional: **REACT_APP_ALPHAGENOME_API_KEY**, **REACT_APP_ALPHAFOLD3_API_URL**, **ALPHAFOLD_API_KEY** — kept for compatibility with older code paths.
+- **VITE_ALPHAGENOME_API_URL** (or `REACT_APP_ALPHAGENOME_API_URL`) — AlphaGenome base URL (the code reads `REACT_APP_ALPHAGENOME_API_URL` in some services).
+- **VITE_BACKEND_URL** — Frontend build-time backend URL (used by `services/backendService.ts` and `utils/alphafoldClient.ts`).
+- Optional compatibility variables: **REACT_APP_ALPHAGENOME_API_KEY**, **REACT_APP_ALPHAFOLD3_API_URL**, **ALPHAFOLD_API_KEY** — used by legacy code paths; prefer `VITE_`-prefixed variables for Vite.
 
 Example `.env.local`:
 
@@ -96,8 +97,4 @@ Notes:
 
 ---
 
-If you'd like, I can:
-1) Add a short link from `README.md` to this `docs/ENV.md`, and
-2) Open a small PR that updates `README.md` and ensures `.env`/`.env.local` are ignored in `.gitignore` (if not already).
-
-Tell me which and I'll proceed. ✅
+Pull requests are welcome to improve this document (open an issue or create a PR).
