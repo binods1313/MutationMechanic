@@ -543,6 +543,21 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                     </button>
                   ))}
                 </div>
+
+                <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl">
+                  <h3 className="text-sm font-bold text-slate-400 uppercase mb-4 flex items-center gap-2">
+                    <Activity size={16} className="text-primary" /> Analysis Frequency
+                  </h3>
+                  <div className="h-80 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={timeSeriesData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.8}/>
+                            <stop offset="95%" stopColor="var(--color-primary)" stopOpacity={0.1}/>
+                          </linearGradient>
+                        </defs>
+                        <XAxis dataKey="date" stroke="#475569" fontSize={10} tickLine={false} axisLine={false} />
                         <YAxis stroke="#475569" fontSize={10} tickLine={false} axisLine={false} />
                         <Tooltip content={<AreaCustomTooltip/>} />
                         <Area type="monotone" dataKey="count" stroke="var(--color-primary)" strokeWidth={3} fillOpacity={1} fill="url(#colorCount)" />
@@ -551,16 +566,6 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                     </ResponsiveContainer>
                   </div>
                 </div>
-
-                <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl">
-                  <h3 className="text-sm font-bold text-slate-400 uppercase mb-8 flex items-center gap-2">
-                    <PieIcon size={16} className="text-primary" /> Risk Profile
-                  </h3>
-                  <div className="h-64 w-full">
-                    <MemoizedPieChart data={riskDistData} />
-                  </div>
-                </div>
-              </div>
             </>
           )}
 
