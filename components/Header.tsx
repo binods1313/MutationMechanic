@@ -37,7 +37,12 @@ const Header: React.FC<HeaderProps> = ({ onOpenSettings }) => {
               <Settings className="h-5 w-5" />
             </button>
 
-            <a href="#" className="text-slate-400 hover:text-white transition-colors p-2">
+            <a
+              href="https://github.com/binods1313/MutationMechanic"
+              className="text-slate-400 hover:text-white transition-colors p-2"
+              aria-label="View repository on GitHub"
+              title="View repository on GitHub"
+            >
               <Github className="h-5 w-5" />
             </a>
           </div>
